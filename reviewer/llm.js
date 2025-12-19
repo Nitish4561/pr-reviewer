@@ -7,7 +7,7 @@ const client = new OpenAI({
 
 export async function runReview(diff) {
   const response = await client.responses.create({
-    model: "o3-mini-high",
+    model: "gpt-4.1-mini",
     input: [
       {
         role: "system",
