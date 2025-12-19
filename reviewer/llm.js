@@ -20,7 +20,7 @@ export async function runReview(diff) {
     ],
     text: {
       format: {
-        type: "json"
+        type: "json_object"
       }
     }
   });
