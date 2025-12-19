@@ -1,6 +1,5 @@
 import OpenAI from "openai";
 import { REVIEW_PROMPT } from "./prompt.js";
-import { REVIEW_SCHEMA } from "./schema.js";
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -8,8 +7,7 @@ const client = new OpenAI({
 
 export async function runReview(diff) {
   const response = await client.responses.create({
-    model: "o3-mini-high",
-    response_format: { type: "json_object" },
+    model: "gpt-4.1-mini",
     input: [
       {
         role: "system",
@@ -17,11 +15,15 @@ export async function runReview(diff) {
       },
       {
         role: "user",
-        content: `Review the following git diff:\n\n${diff}`,
+        content: `Review the following git diff and return ONLY valid JSON:\n\n${diff}`,
       },
     ],
+    text: {
+      format: {
+        type: "json_object"
+      }
+    }
   });
 
-  const output = JSON.parse(response.output_text);
-  return output;
+  return JSON.parse(response.output_text);
 }

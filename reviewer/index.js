@@ -11,28 +11,51 @@ async function main() {
 
   const review = await runReview(diff);
 
+  const normalized = {
+    summary: review?.summary ?? "No summary provided.",
+    quality_score: Number.isFinite(review?.quality_score)
+      ? review.quality_score
+      : 7,
+    should_block_merge: Boolean(review?.should_block_merge),
+    issues: Array.isArray(review?.issues) ? review.issues : [],
+    positive_notes: Array.isArray(review?.positive_notes)
+      ? review.positive_notes
+      : []
+  };
+
   const body = `
 ## 🤖 AI PR Review
 
-**Summary**
-${review.summary}
+**Summary**  
+${normalized.summary}
 
-**Quality Score:** ${review.quality_score}/10  
-**Should Block Merge:** ${review.should_block_merge ? "❌ Yes" : "✅ No"}
+**Quality Score:** ${normalized.quality_score}/10  
+**Should Block Merge:** ${
+    normalized.should_block_merge ? "❌ Yes" : "✅ No"
+  }
 
 ### ⚠️ Issues
-${review.issues.map(
-  i => `- **[${i.severity}]** ${i.description}\n  👉 ${i.suggestion}`
-).join("\n")}
+${
+  normalized.issues.length > 0
+    ? normalized.issues
+        .map(
+          i =>
+            `- **[${i.severity ?? "medium"}]** ${
+              i.description ?? "Issue detected"
+            }\n  👉 ${i.suggestion ?? "Consider improving this"}`
+        )
+        .join("\n")
+    : "_No issues found._"
+}
 
 ### 👍 Positives
-${review.positive_notes.map(p => `- ${p}`).join("\n")}
+${
+  normalized.positive_notes.length > 0
+    ? normalized.positive_notes.map(p => `- ${p}`).join("\n")
+    : "_No positives mentioned._"
+}
 `;
 
   await postReviewComment(body);
 }
 
-main().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
