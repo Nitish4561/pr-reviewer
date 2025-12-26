@@ -1,63 +1,64 @@
-import { getPullRequest, getPullRequestDiff, postReviewComment, postFileComment, applyLabels } from "./github.js";
+import { getPullRequestDiff, postReviewComment, applyLabels } from "./github.js";
 import { runReview, FALLBACK_REVIEW } from "./llm.js";
-import { shouldSkipByTitle, shouldSkipFile } from "./utils.js";
+
+console.log("🔥 reviewer/index.js LOADED");
 
 async function main() {
+  console.log("🚀 Reviewer started");
 
-  const pr = await getPullRequest();
-
-  if (shouldSkipByTitle(pr.title)) {
-    return;
-  }
-
+  // Fetch the PR diff
   const diff = await getPullRequestDiff();
-  if (!diff || diff.length < 50) {
+  console.log("📄 Diff length:", diff?.length ?? "undefined");
+
+  // Skip very small diffs
+  if (!diff || diff.length < 10) {
+    console.log("⚠️ PR diff too small, skipping review.");
     return;
   }
 
-  const review = await runReview(diff) ?? FALLBACK_REVIEW;
+  // Run the AI review
+  const review = await runReview(diff);
+  console.log("🤖 AI review completed:", review);
 
-  // --- PR-level comment ---
-  const body = `
+  // Build the PR comment
+  const commentBody = `
 ## 🤖 AI PR Review
 
-**Summary**
-${review.summary}
+**Summary:**  
+${review.summary ?? "No summary provided"}
 
-**Quality Score:** ${review.quality_score ?? "N/A"}/10  
+**Quality Score:** ${review.quality_score ?? 0}/10  
 **Should Block Merge:** ${review.should_block_merge ? "❌ Yes" : "✅ No"}
 
 ### ⚠️ Issues
 ${
-  review.issues.length
-    ? review.issues.map(i => `- **[${i.severity}]** ${i.description}`).join("\n")
+  review.issues?.length > 0
+    ? review.issues.map(i => `- [${i.severity}] ${i.description}\n  👉 ${i.suggestion}`).join("\n")
     : "_No issues found._"
 }
 
 ### 👍 Positives
 ${
-  review.positive_notes.length
+  review.positive_notes?.length > 0
     ? review.positive_notes.map(p => `- ${p}`).join("\n")
     : "_No positives mentioned._"
 }
 `;
 
-  await postReviewComment(body);
+  // Post the comment to GitHub
+  console.log("📝 Posting PR comment...");
+  await postReviewComment(commentBody);
+  console.log("✅ PR comment posted");
 
-  // --- File-level comments ---
-  for (const issue of review.issues) {
-    if (!issue.file || shouldSkipFile(issue.file)) continue;
-
-    await postFileComment({
-      path: issue.file,
-      body: `⚠️ **${issue.severity.toUpperCase()}**\n${issue.description}\n👉 ${issue.suggestion}`
-    });
+  // Optional: Apply labels based on review
+  if (typeof applyLabels === "function") {
+    console.log("🏷️ Applying labels based on review...");
+    await applyLabels(review);
+    console.log("✅ Labels applied");
   }
-
-  // --- Labels ---
-  await applyLabels(review);
 }
 
 main().catch(err => {
+  console.error("❌ Reviewer failed:", err);
   process.exit(1);
 });
