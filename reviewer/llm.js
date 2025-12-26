@@ -4,7 +4,6 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Fallback review
 export const FALLBACK_REVIEW = {
   summary: "AI review failed due to invalid response",
   quality_score: 0,
@@ -19,7 +18,6 @@ export const FALLBACK_REVIEW = {
   positive_notes: [],
 };
 
-// JSON schema for structured review
 const REVIEW_SCHEMA = {
   type: "object",
   properties: {
@@ -39,27 +37,20 @@ const REVIEW_SCHEMA = {
         additionalProperties: false,
       },
     },
-    positive_notes: {
-      type: "array",
-      items: { type: "string" },
-    },
+    positive_notes: { type: "array", items: { type: "string" } },
   },
   required: ["summary", "quality_score", "should_block_merge", "issues", "positive_notes"],
   additionalProperties: false,
 };
 
-/**
- * Run AI review
- */
 export async function runReview(diff) {
   if (!diff || diff.length < 10) return FALLBACK_REVIEW;
 
   const prompt = `
-You are a senior code reviewer. Review the following git diff.
-Return a single valid JSON object matching this schema:
+You are a senior code reviewer. Analyze this git diff and return a single JSON object matching the schema:
 summary, quality_score (1-10), should_block_merge (boolean), issues, positive_notes.
 
-Diff:
+Git diff:
 \`\`\`diff
 ${diff}
 \`\`\`
@@ -69,13 +60,11 @@ ${diff}
     const response = await client.responses.create({
       model: "gpt-4.1-mini",
       input: prompt,
-      text: {
-        format: {
-          type: "json_schema",
-          json_schema: {
-            name: "pr_review", // ✅ required parameter
-            schema: REVIEW_SCHEMA,
-          },
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "pr_review", // ✅ required
+          schema: REVIEW_SCHEMA,
         },
       },
     });
