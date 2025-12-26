@@ -69,15 +69,16 @@ ${diff}
       },
     });
 
-    if (!response.output_parsed) {
-      console.warn("⚠️ No parsed output from model, returning fallback review");
-      console.log("Raw output:", response.output_text);
+    const outputText = response.output_text || response.output_parsed;
+    
+    if (!outputText) {
       return FALLBACK_REVIEW;
     }
 
-    return response.output_parsed;
+    // Parse JSON if it's a string
+    const parsed = typeof outputText === 'string' ? JSON.parse(outputText) : outputText;
+    return parsed;
   } catch (err) {
-    console.error("❌ runReview failed:", err.message ?? err);
     return FALLBACK_REVIEW;
   }
 }
