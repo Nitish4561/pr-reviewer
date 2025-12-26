@@ -1,7 +1,8 @@
+// reviewer/llm.js
 import OpenAI from "openai";
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 /**
@@ -25,24 +26,39 @@ Git diff:
 \`\`\`diff
 ${diff}
 \`\`\`
+
+Respond ONLY with a valid JSON object.
 `;
 
   try {
-    const response = await client.responses.create({
-      model: "gpt-4.1-mini", // Use a valid model
-      input: prompt,
-      text: { format: "json_object" } // structured JSON output
+    const response = await client.chat.completions.create({
+      model: "gpt-4.1-mini", // or gpt-3.5-turbo if you don't have gpt-4 access
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0,
     });
 
-    // Parse AI output safely
-    const review = response.output_parsed ?? {};
+    // Extract model output
+    const rawText = response.choices[0].message.content;
+
+    // Safely parse JSON
+    let review;
+    try {
+      review = JSON.parse(rawText);
+    } catch (err) {
+      console.error("⚠️ Failed to parse AI JSON response:", rawText);
+      review = {};
+    }
 
     return {
       summary: review.summary ?? "No summary provided",
-      quality_score: Number.isFinite(review.quality_score) ? review.quality_score : 7,
+      quality_score: Number.isFinite(review.quality_score)
+        ? review.quality_score
+        : 7,
       should_block_merge: review.should_block_merge ?? false,
       issues: Array.isArray(review.issues) ? review.issues : [],
-      positive_notes: Array.isArray(review.positive_notes) ? review.positive_notes : []
+      positive_notes: Array.isArray(review.positive_notes)
+        ? review.positive_notes
+        : [],
     };
   } catch (err) {
     console.error("❌ runReview failed:", err);
@@ -51,7 +67,7 @@ ${diff}
       quality_score: 7,
       should_block_merge: false,
       issues: [],
-      positive_notes: []
+      positive_notes: [],
     };
   }
 }
