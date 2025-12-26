@@ -23,18 +23,25 @@ export async function getPullRequestDiff() {
 
 
 export async function postReviewComment(body) {
-  console.log("📝 Posting PR comment...");
-  console.log({ owner, repo, pull_number });
+  console.log("📝 Inside postReviewComment");
+
+  console.log("ENV:", {
+    owner: process.env.REPO_OWNER,
+    repo: process.env.REPO_NAME,
+    pr: process.env.PR_NUMBER,
+    hasToken: !!process.env.GITHUB_TOKEN,
+  });
 
   const res = await octokit.rest.issues.createComment({
     owner,
     repo,
-    issue_number: pull_number,
+    issue_number: Number(process.env.PR_NUMBER),
     body,
   });
 
-  console.log("✅ Comment posted", res.status);
+  console.log("✅ GitHub API response", res.status);
 }
+
 
 
 
