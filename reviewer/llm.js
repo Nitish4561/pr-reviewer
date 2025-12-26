@@ -1,53 +1,27 @@
-// import OpenAI from "openai";
-// import { REVIEW_PROMPT } from "./prompt.js";
-
-// const client = new OpenAI({
-//   apiKey: process.env.OPENAI_API_KEY,
-// });
-
-// export async function runReview(diff) {
-//   const response = await client.responses.create({
-//     model: "gpt-4.1-mini",
-//     input: [
-//       {
-//         role: "system",
-//         content: REVIEW_PROMPT,
-//       },
-//       {
-//         role: "user",
-//         content: `Review the following git diff and return ONLY valid JSON:\n\n${diff}`,
-//       },
-//     ],
-//     text: {
-//       format: {
-//         type: "json_object"
-//       }
-//     }
-//   });
-
-//   return JSON.parse(response.output_text);
-// }
-
 import OpenAI from "openai";
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY
 });
 
+/**
+ * Runs AI review on a git diff and returns structured review data
+ * @param {string} diff - Git diff from the PR
+ * @returns {Object} review with summary, quality_score, should_block_merge, issues, positive_notes
+ */
 export async function runReview(diff) {
   if (!diff) return {};
 
-  // Prompt the AI to generate a structured code review
   const prompt = `
-You are a senior code reviewer. Analyze the following git diff and provide a detailed review in JSON format.
-Return the following fields:
-- summary: A short summary of the PR changes.
-- quality_score: Number from 1 to 10 indicating code quality.
-- should_block_merge: true if there are major issues, false otherwise.
-- issues: List of detected issues with fields: severity, description, suggestion.
-- positive_notes: List of positive aspects.
+You are a senior code reviewer. Analyze the following git diff and provide a JSON review.
+Return the following fields exactly:
+- summary: short summary of the PR changes
+- quality_score: number from 1 to 10 indicating overall code quality
+- should_block_merge: true if there are major issues, false otherwise
+- issues: array of objects with keys severity (low/medium/high), description, suggestion
+- positive_notes: array of positive aspects
 
-Here is the diff:
+Git diff:
 \`\`\`diff
 ${diff}
 \`\`\`
@@ -57,13 +31,14 @@ ${diff}
     const response = await client.responses.create({
       model: "gpt-4.1-mini", // Use a valid model
       input: prompt,
-      text: { format: "json_object" } // Structured JSON output
+      text: { format: "json_object" } // structured JSON output
     });
 
+    // Parse AI output safely
     const review = response.output_parsed ?? {};
-    // fallback for safety
+
     return {
-      summary: review.summary ?? "No summary provided.",
+      summary: review.summary ?? "No summary provided",
       quality_score: Number.isFinite(review.quality_score) ? review.quality_score : 7,
       should_block_merge: review.should_block_merge ?? false,
       issues: Array.isArray(review.issues) ? review.issues : [],
