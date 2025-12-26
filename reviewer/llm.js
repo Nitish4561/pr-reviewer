@@ -4,7 +4,7 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const FALLBACK_REVIEW = {
+export const FALLBACK_REVIEW = {
   summary: "AI review failed due to invalid response",
   quality_score: 0,
   should_block_merge: false,
