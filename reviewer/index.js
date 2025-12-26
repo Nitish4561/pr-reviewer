@@ -3,6 +3,8 @@ import { runReview } from "./llm.js";
 
 async function main() {
   const diff = await getPullRequestDiff();
+  await postReviewComment("🚀 AI PR Reviewer test comment");
+
 
   if (!diff || diff.length < 50) {
     console.log("PR diff too small, skipping review.");
