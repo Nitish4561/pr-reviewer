@@ -63,10 +63,8 @@ ${diff}
       text: {
         format: {
           type: "json_schema",
-          json_schema: {
-            name: "pr_review",
-            schema: REVIEW_SCHEMA,
-          },
+          name: "pr_review",
+          schema: REVIEW_SCHEMA,
         },
       },
     });
