@@ -29,4 +29,5 @@ export async function postReviewComment(body) {
     issue_number: pull_number,
     body,
   });
+  console.log("Posting comment to PR:", pull_number);
 }
