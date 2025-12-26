@@ -1,8 +1,7 @@
-// llm.js
 import OpenAI from "openai";
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 // Fallback review
@@ -14,10 +13,10 @@ export const FALLBACK_REVIEW = {
     {
       severity: "low",
       description: "AI review could not be generated",
-      suggestion: "Check workflow logs for LLM errors"
-    }
+      suggestion: "Check workflow logs for LLM errors",
+    },
   ],
-  positive_notes: []
+  positive_notes: [],
 };
 
 // JSON schema for structured review
@@ -34,19 +33,19 @@ const REVIEW_SCHEMA = {
         properties: {
           severity: { type: "string", enum: ["low", "medium", "high"] },
           description: { type: "string" },
-          suggestion: { type: "string" }
+          suggestion: { type: "string" },
         },
         required: ["severity", "description", "suggestion"],
-        additionalProperties: false
-      }
+        additionalProperties: false,
+      },
     },
     positive_notes: {
       type: "array",
-      items: { type: "string" }
-    }
+      items: { type: "string" },
+    },
   },
   required: ["summary", "quality_score", "should_block_merge", "issues", "positive_notes"],
-  additionalProperties: false
+  additionalProperties: false,
 };
 
 /**
@@ -74,11 +73,11 @@ ${diff}
         format: {
           type: "json_schema",
           json_schema: {
-            name: "pr_review",
-            schema: REVIEW_SCHEMA
-          }
-        }
-      }
+            name: "pr_review", // ✅ required parameter
+            schema: REVIEW_SCHEMA,
+          },
+        },
+      },
     });
 
     if (!response.output_parsed) {
