@@ -39,6 +39,7 @@ Respond ONLY with a valid JSON object.
 
     // Extract model output
     const rawText = response.choices[0].message.content;
+    console.log("🤖 LLM raw output:", rawText);
 
     // Safely parse JSON
     let review;
