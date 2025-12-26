@@ -1,24 +1,18 @@
 import { getPullRequestDiff, postReviewComment } from "./github.js";
 import { runReview } from "./llm.js";
 
-console.log("🔥 reviewer/index.js LOADED");
-
 async function main() {
-  console.log("🚀 Reviewer started");
 
   // Fetch PR diff
   const diff = await getPullRequestDiff();
-  console.log("📄 Diff length:", diff?.length);
 
   if (!diff || diff.length < 50) {
     await postReviewComment("⚠️ PR diff too small to review.");
-    console.log("⚠️ Skipped review due to small diff.");
     return;
   }
 
   // Run AI review
   const review = await runReview(diff);
-  console.log("🤖 LLM raw output:", JSON.stringify(review, null, 2));
 
   // Normalize review data
   const normalized = {
@@ -58,9 +52,7 @@ ${
 }
 `;
 
-  console.log("👉 About to call postReviewComment");
   await postReviewComment(body);
-  console.log("✅ Comment posted successfully");
 }
 
 // Execute main

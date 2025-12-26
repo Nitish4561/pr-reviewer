@@ -18,24 +18,18 @@ export async function getPullRequestDiff() {
       headers: { accept: "application/vnd.github.v3.diff" },
     }
   );
-  console.log("📦 PR diff response:", res);
   return res.data;
 }
 
 
 
 export async function postReviewComment(body) {
-  console.log("📝 Posting PR comment...");
-  console.log({ owner, repo, pull_number });
-
   const res = await octokit.rest.issues.createComment({
     owner,
     repo,
     issue_number: pull_number,
     body,
   });
-
-  console.log("✅ Comment posted", res.status);
 }
 
 

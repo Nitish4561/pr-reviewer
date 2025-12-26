@@ -54,7 +54,6 @@ ${diff}
     });
 
     const raw = response.choices?.[0]?.message?.content;
-    console.log("🤖 LLM raw output:", raw);
 
     if (!raw) {
       console.warn("⚠️ Empty LLM response");
