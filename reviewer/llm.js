@@ -4,43 +4,36 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const REVIEW_SCHEMA = {
-  name: "pr_review",
+export const REVIEW_SCHEMA = {
   schema: {
     type: "object",
-    required: [
-      "summary",
-      "quality_score",
-      "should_block_merge",
-      "issues",
-      "positive_notes"
-    ],
+    additionalProperties: false,  // ✅ REQUIRED
     properties: {
       summary: { type: "string" },
-      quality_score: { type: "number", minimum: 0, maximum: 10 },
+      quality_score: { type: "number" },
       should_block_merge: { type: "boolean" },
       issues: {
         type: "array",
         items: {
           type: "object",
-          required: ["severity", "description", "suggestion"],
+          additionalProperties: false, // ✅ REQUIRED for nested objects
           properties: {
-            severity: {
-              type: "string",
-              enum: ["low", "medium", "high"]
-            },
+            severity: { type: "string", enum: ["low", "medium", "high"] },
             description: { type: "string" },
             suggestion: { type: "string" }
-          }
+          },
+          required: ["severity", "description", "suggestion"]
         }
       },
       positive_notes: {
         type: "array",
         items: { type: "string" }
       }
-    }
+    },
+    required: ["summary", "quality_score", "should_block_merge", "issues", "positive_notes"]
   }
 };
+
 
 export const FALLBACK_REVIEW = {
   summary: "AI review failed due to invalid response",
@@ -63,10 +56,16 @@ export async function runReview(diff) {
     const response = await client.responses.create({
       model: "gpt-4.1-mini",
       input: `
-You are a senior software engineer performing a PR review.
-Analyze the following git diff and return a structured review.
+You are a senior software engineer and code reviewer.
+Analyze the following git diff and provide a detailed review.
 
-Return ONLY valid JSON matching the schema.
+Rules:
+- Be concise and precise.
+- Output must match the JSON schema named 'pr_review'.
+- Provide actionable feedback.
+- Highlight positives as well as issues.
+- Only include the fields defined in the schema: summary, quality_score, should_block_merge, issues, positive_notes.
+
 
 Git diff:
 \`\`\`diff
