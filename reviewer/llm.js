@@ -27,17 +27,16 @@ Git diff:
 ${diff}
 \`\`\`
 
-Respond ONLY with a valid JSON object.
+⚠️ IMPORTANT: Respond ONLY with a single valid JSON object. No explanations, no extra text, no markdown, nothing else.
 `;
 
   try {
     const response = await client.chat.completions.create({
-      model: "gpt-4.1-mini", // or gpt-3.5-turbo if you don't have gpt-4 access
+      model: "gpt-4.1-mini", // or gpt-3.5-turbo
       messages: [{ role: "user", content: prompt }],
       temperature: 0,
     });
 
-    // Extract model output
     const rawText = response.choices[0].message.content;
     console.log("🤖 LLM raw output:", rawText);
 
@@ -46,7 +45,7 @@ Respond ONLY with a valid JSON object.
     try {
       review = JSON.parse(rawText);
     } catch (err) {
-      console.error("⚠️ Failed to parse AI JSON response:", rawText);
+      console.warn("⚠️ Failed to parse AI JSON response. Returning fallback review.");
       review = {};
     }
 
