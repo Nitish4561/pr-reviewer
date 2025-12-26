@@ -25,7 +25,6 @@ async function main() {
 
   const body = `
 ## 🤖 AI PR Review
-## 🤖 AI PR Review this is a test PR for the AI PR Reviewer, please review the PR and provide a detailed review.
 
 **Summary**  
 ${normalized.summary}
