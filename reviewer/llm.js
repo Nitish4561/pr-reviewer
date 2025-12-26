@@ -4,6 +4,44 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+const REVIEW_SCHEMA = {
+  name: "pr_review",
+  schema: {
+    type: "object",
+    required: [
+      "summary",
+      "quality_score",
+      "should_block_merge",
+      "issues",
+      "positive_notes"
+    ],
+    properties: {
+      summary: { type: "string" },
+      quality_score: { type: "number", minimum: 0, maximum: 10 },
+      should_block_merge: { type: "boolean" },
+      issues: {
+        type: "array",
+        items: {
+          type: "object",
+          required: ["severity", "description", "suggestion"],
+          properties: {
+            severity: {
+              type: "string",
+              enum: ["low", "medium", "high"]
+            },
+            description: { type: "string" },
+            suggestion: { type: "string" }
+          }
+        }
+      },
+      positive_notes: {
+        type: "array",
+        items: { type: "string" }
+      }
+    }
+  }
+};
+
 export const FALLBACK_REVIEW = {
   summary: "AI review failed due to invalid response",
   quality_score: 0,
@@ -12,55 +50,45 @@ export const FALLBACK_REVIEW = {
     {
       severity: "low",
       description: "AI review could not be generated",
-      suggestion: "Check workflow logs for LLM response and parsing errors"
+      suggestion: "Check workflow logs for LLM errors"
     }
   ],
   positive_notes: []
 };
 
-
 export async function runReview(diff) {
-  if (!diff) return FALLBACK_REVIEW;
-
-  const prompt = `
-You are a senior code reviewer.
-
-You MUST respond with ONLY a valid JSON object.
-Do NOT include markdown, comments, or explanations.
-Do NOT wrap the JSON in backticks.
-
-The JSON must have exactly this shape:
-
-{
-  "summary": string,
-  "quality_score": number (1-10),
-  "should_block_merge": boolean,
-  "issues": [
-    {
-      "severity": "low" | "medium" | "high",
-      "description": string,
-      "suggestion": string
-    }
-  ],
-  "positive_notes": string[]
-}
-
-Git diff:
-${diff}
-`;
-
+  if (!diff || diff.length < 50) return FALLBACK_REVIEW;
 
   try {
-    const res = await client.responses.create({
+    const response = await client.responses.create({
       model: "gpt-4.1-mini",
-      input: prompt
+      input: `
+You are a senior software engineer performing a PR review.
+Analyze the following git diff and return a structured review.
+
+Return ONLY valid JSON matching the schema.
+
+Git diff:
+\`\`\`diff
+${diff}
+\`\`\`
+      `,
+      text: {
+        format: {
+          type: "json_schema",
+          schema: REVIEW_SCHEMA
+        }
+      }
     });
 
-    const text = res.output_text;
-    if (!text) return FALLBACK_REVIEW;
+    if (!response.output_parsed) {
+      console.warn("⚠️ No parsed output from model");
+      return FALLBACK_REVIEW;
+    }
 
-    return JSON.parse(text);
+    return response.output_parsed;
   } catch (err) {
+    console.error("❌ runReview failed:", err.message);
     return FALLBACK_REVIEW;
   }
 }
