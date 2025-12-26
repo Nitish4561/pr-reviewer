@@ -52,8 +52,13 @@ async function callLLM(diff) {
     text: { format: "json_object" }
   });
 
+  if (!response.output_parsed) {
+    console.warn("⚠️ Raw LLM output:", response.output_text);
+  }
+
   return response.output_parsed;
 }
+
 
 export async function runReview(diff) {
   if (!diff || typeof diff !== "string") {
