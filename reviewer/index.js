@@ -1,50 +1,50 @@
-import { getPullRequestDiff, postReviewComment } from "./github.js";
+import { getPullRequestDiff, postReviewComment, applyLabels } from "./github.js";
 import { runReview } from "./llm.js";
-
-console.log("🔥 reviewer/index.js LOADED");
 
 async function main() {
   console.log("🚀 Reviewer started");
 
-  // Fetch PR diff
   const diff = await getPullRequestDiff();
-  console.log("📄 Diff length:", diff?.length);
-
   if (!diff || diff.length < 50) {
-    await postReviewComment("⚠️ PR diff too small to review.");
-    console.log("⚠️ Skipped review due to small diff.");
+    console.log("PR diff too small, skipping review.");
     return;
   }
 
-  // Run AI review
   const review = await runReview(diff);
-  console.log("🤖 LLM raw output:", JSON.stringify(review, null, 2));
 
-  // Normalize review data
-  const normalized = {
-    summary: review?.summary ?? "No summary provided.",
-    quality_score: Number.isFinite(review?.quality_score) ? review.quality_score : 7,
-    should_block_merge: Boolean(review?.should_block_merge),
-    issues: Array.isArray(review?.issues) ? review.issues : [],
-    positive_notes: Array.isArray(review?.positive_notes) ? review.positive_notes : []
-  };
+  // --- Label decision logic ---
+  const labels = ["ai-reviewed"];
 
-  // Build comment body
+  if (
+    review.summary?.toLowerCase().includes("failed") ||
+    review.quality_score === 0
+  ) {
+    labels.push("ai-failed");
+  } else if (review.quality_score >= 8 && review.issues.length === 0) {
+    labels.push("ai-clean");
+  } else {
+    labels.push("ai-needs-attention");
+  }
+
+  await applyLabels(labels);
+
+  // --- Comment body (unchanged) ---
   const body = `
 ## 🤖 AI PR Review
 
-**Summary**  
-${normalized.summary}
+**Summary**
+${review.summary}
 
-**Quality Score:** ${normalized.quality_score}/10  
-**Should Block Merge:** ${normalized.should_block_merge ? "❌ Yes" : "✅ No"}
+**Quality Score:** ${review.quality_score ?? "N/A"}/10  
+**Should Block Merge:** ${review.should_block_merge ? "❌ Yes" : "✅ No"}
 
 ### ⚠️ Issues
 ${
-  normalized.issues.length > 0
-    ? normalized.issues
+  review.issues.length > 0
+    ? review.issues
         .map(
-          i => `- **[${i.severity ?? "medium"}]** ${i.description}\n  👉 ${i.suggestion ?? "Consider improving this"}`
+          i =>
+            `- **[${i.severity}]** ${i.description}\n  👉 ${i.suggestion}`
         )
         .join("\n")
     : "_No issues found._"
@@ -52,19 +52,16 @@ ${
 
 ### 👍 Positives
 ${
-  normalized.positive_notes.length > 0
-    ? normalized.positive_notes.map(p => `- ${p}`).join("\n")
+  review.positive_notes.length > 0
+    ? review.positive_notes.map(p => `- ${p}`).join("\n")
     : "_No positives mentioned._"
 }
 `;
 
-  console.log("👉 About to call postReviewComment");
   await postReviewComment(body);
-  console.log("✅ Comment posted successfully");
 }
 
-// Execute main
 main().catch(err => {
-  console.error("❌ Reviewer crashed:", err);
+  console.error(err);
   process.exit(1);
 });
