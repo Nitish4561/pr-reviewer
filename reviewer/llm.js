@@ -87,7 +87,6 @@ ${diff}
         : FALLBACK_REVIEW.positive_notes,
     };
   } catch (err) {
-    console.error("❌ runReview failed:", err.message);
     return FALLBACK_REVIEW;
   }
 }
