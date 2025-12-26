@@ -60,11 +60,13 @@ ${diff}
     const response = await client.responses.create({
       model: "gpt-4.1-mini",
       input: prompt,
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "pr_review", // ✅ required
-          schema: REVIEW_SCHEMA,
+      text: {
+        format: {
+          type: "json_schema",
+          json_schema: {
+            name: "pr_review",
+            schema: REVIEW_SCHEMA,
+          },
         },
       },
     });
