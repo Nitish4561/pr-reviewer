@@ -26,16 +26,18 @@ Git diff:
 ${diff}
 \`\`\`
 `;
+console.log("📦 Diff length:", diff?.length);
+console.log("📦 Prompt:", prompt.substring(0, 500), "...");
 
   try {
-    const response = await client.responses.create({
-      model: "gpt-4.1-mini", // Use a valid model
-      input: prompt,
-      text: { format: "json_object" } // structured JSON output
+    const response = await client.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0
     });
-
-    // Parse AI output safely
-    const review = response.output_parsed ?? {};
+    
+    const review = JSON.parse(response.choices[0].message.content);
+    
 
     return {
       summary: review.summary ?? "No summary provided",
@@ -46,6 +48,8 @@ ${diff}
     };
   } catch (err) {
     console.error("❌ runReview failed:", err);
+    console.error("❌ runReview failed:", err.response?.data ?? err.message);
+
     return {
       summary: "Failed to generate AI review",
       quality_score: 7,
