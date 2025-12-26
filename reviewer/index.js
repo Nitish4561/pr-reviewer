@@ -6,9 +6,9 @@ async function main() {
   //const diff = await getPullRequestDiff();
   console.log("🚀 Reviewer started");
 
+  console.log("👉 About to call postReviewComment");
   await postReviewComment("🚀 AI PR Reviewer test comment");
-
-  console.log("✅ postReviewComment executed");
+  console.log("✅ postReviewComment finished");
   
 
 
@@ -66,4 +66,8 @@ async function main() {
 
 //   await postReviewComment(body);
 }
+main().catch(err => {
+  console.error("❌ Reviewer crashed:", err);
+  process.exit(1);
+});
 
