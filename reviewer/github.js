@@ -23,11 +23,19 @@ export async function getPullRequestDiff() {
 }
 
 export async function postReviewComment(body) {
-  await octokit.rest.issues.createComment({
-    owner,
-    repo,
-    issue_number: pull_number,
-    body,
-  });
-  console.log("Posting comment to PR:", pull_number);
+  try {
+    const res = await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: pull_number,
+      body,
+    });
+
+    console.log("✅ PR comment posted:", res.data.html_url);
+  } catch (err) {
+    console.error("❌ Failed to post PR comment");
+    console.error(err.status, err.message);
+    throw err;
+  }
 }
+
