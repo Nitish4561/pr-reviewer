@@ -76,9 +76,11 @@ ${diff}
       text: {
         format: {
           type: "json_schema",
-          schema: REVIEW_SCHEMA
+          name: "pr_review",
+          schema: REVIEW_SCHEMA.schema
         }
       }
+      
     });
 
     if (!response.output_parsed) {
