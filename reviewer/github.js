@@ -1,81 +1,74 @@
 import { Octokit } from "@octokit/rest";
 
 const octokit = new Octokit({
-  auth: process.env.GITHUB_TOKEN,
+  auth: process.env.GITHUB_TOKEN
 });
 
 const owner = process.env.REPO_OWNER;
 const repo = process.env.REPO_NAME;
 const pull_number = Number(process.env.PR_NUMBER);
 
-/**
- * Fetch the pull request diff
- */
+export async function getPullRequest() {
+  const { data } = await octokit.rest.pulls.get({
+    owner,
+    repo,
+    pull_number
+  });
+  return data;
+}
+
 export async function getPullRequestDiff() {
-  try {
-    const res = await octokit.request(
-      "GET /repos/{owner}/{repo}/pulls/{pull_number}",
-      {
-        owner,
-        repo,
-        pull_number,
-        headers: { accept: "application/vnd.github.v3.diff" },
-      }
-    );
-    return res.data; // Git diff as string
-  } catch (err) {
-    console.error("❌ Failed to fetch PR diff:", err);
-    return null;
-  }
+  const res = await octokit.request(
+    "GET /repos/{owner}/{repo}/pulls/{pull_number}",
+    {
+      owner,
+      repo,
+      pull_number,
+      headers: { accept: "application/vnd.github.v3.diff" }
+    }
+  );
+  return res.data;
 }
 
-/**
- * Post a comment to the pull request
- * @param {string} body - Comment content
- */
 export async function postReviewComment(body) {
-  try {
-    await octokit.rest.issues.createComment({
-      owner,
-      repo,
-      issue_number: pull_number,
-      body,
-    });
-    console.log("✅ Comment posted successfully");
-  } catch (err) {
-    console.error("❌ Failed to post PR comment:", err);
-  }
+  await octokit.rest.issues.createComment({
+    owner,
+    repo,
+    issue_number: pull_number,
+    body
+  });
 }
 
-/**
- * Apply labels based on AI review
- * @param {Object} review - Review object returned by runReview()
- */
-export async function applyLabels(review) {
-  if (!review) return;
-
-  const labels = [];
-
-  // Example rules
-  if (review.summary?.toLowerCase().includes("failed") || review.quality_score === 0) {
-    labels.push("ai-failed");
-  } else if (review.issues?.length > 0) {
-    labels.push("ai-needs-attention");
-  } else {
-    labels.push("ai-clean");
-  }
-
-  if (labels.length === 0) return;
-
-  try {
-    await octokit.rest.issues.addLabels({
+export async function postFileComment({ path, body }) {
+  await octokit.request(
+    "POST /repos/{owner}/{repo}/pulls/{pull_number}/comments",
+    {
       owner,
       repo,
-      issue_number: pull_number,
-      labels,
-    });
-    console.log("✅ Labels applied:", labels.join(", "));
-  } catch (err) {
-    console.error("❌ Failed to apply labels:", err);
+      pull_number,
+      body,
+      path,
+      side: "RIGHT",
+      line: 1
+    }
+  );
+}
+
+export async function applyLabels(review) {
+  let labels = [];
+
+  if (review.summary?.toLowerCase().includes("failed")) {
+    labels.push("ai-failed");
+  } else if (review.issues.length === 0) {
+    labels.push("ai-clean");
+  } else {
+    labels.push("ai-needs-attention");
   }
+
+  await octokit.rest.issues.addLabels({
+    owner,
+    repo,
+    issue_number: pull_number,
+    labels
+  });
 }
