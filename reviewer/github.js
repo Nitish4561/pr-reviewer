@@ -10,17 +10,17 @@ const pull_number = Number(process.env.PR_NUMBER);
 
 export async function getPullRequestDiff() {
   const res = await octokit.request(
-    "GET /repos/{owner}/{repo}/pulls/{pull_number}",
+    "GET /repos/{owner}/{repo}/pulls/{pull_number}.diff",
     {
       owner,
       repo,
       pull_number,
-      headers: { accept: "application/vnd.github.v3.diff" },
     }
   );
 
   return res.data;
 }
+
 
 export async function postReviewComment(body) {
   console.log("➡️ Attempting to post PR comment");

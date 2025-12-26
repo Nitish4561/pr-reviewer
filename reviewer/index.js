@@ -1,9 +1,13 @@
 import { getPullRequestDiff, postReviewComment } from "./github.js";
 import { runReview } from "./llm.js";
+console.log("🚀 Reviewer started");
 
 async function main() {
   const diff = await getPullRequestDiff();
+  console.log("📝 Posting PR comment...");
   await postReviewComment("🚀 AI PR Reviewer test comment");
+  console.log("✅ Comment posted");
+  
 
 
   if (!diff || diff.length < 50) {
