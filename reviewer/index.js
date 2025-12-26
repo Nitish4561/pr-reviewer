@@ -3,7 +3,8 @@ import { runReview } from "./llm.js";
 console.log("🚀 Reviewer started");
 
 async function main() {
-  //const diff = await getPullRequestDiff();
+  const diff = await getPullRequestDiff();
+  console.log("📄 Diff length:", diff?.length);
   console.log("🚀 Reviewer started");
 
   console.log("👉 About to call postReviewComment");
@@ -12,12 +13,14 @@ async function main() {
   
 
 
-//   if (!diff || diff.length < 50) {
-//     console.log("PR diff too small, skipping review.");
-//     return;
-//   }
+  if (!diff || diff.length < 50) {
+    console.log("PR diff too small, skipping review.");
+    return;
+  }
 
-//   const review = await runReview(diff);
+   const review = await runReview(diff);
+   console.log("🤖 LLM raw output:", JSON.stringify(review, null, 2));
+
 
 //   const normalized = {
 //     summary: review?.summary ?? "No summary provided.",
