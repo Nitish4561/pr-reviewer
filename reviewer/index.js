@@ -1,34 +1,23 @@
-import { getPullRequestDiff, postReviewComment, applyLabels } from "./github.js";
-import { runReview } from "./llm.js";
+import { getPullRequest, getPullRequestDiff, postReviewComment, postFileComment, applyLabels } from "./github.js";
+import { runReview, FALLBACK_REVIEW } from "./llm.js";
+import { shouldSkipByTitle, shouldSkipFile } from "./utils.js";
 
 async function main() {
-  console.log("🚀 Reviewer started");
 
-  const diff = await getPullRequestDiff();
-  if (!diff || diff.length < 50) {
-    console.log("PR diff too small, skipping review.");
+  const pr = await getPullRequest();
+
+  if (shouldSkipByTitle(pr.title)) {
     return;
   }
 
-  const review = await runReview(diff);
-
-  // --- Label decision logic ---
-  const labels = ["ai-reviewed"];
-
-  if (
-    review.summary?.toLowerCase().includes("failed") ||
-    review.quality_score === 0
-  ) {
-    labels.push("ai-failed");
-  } else if (review.quality_score >= 8 && review.issues.length === 0) {
-    labels.push("ai-clean");
-  } else {
-    labels.push("ai-needs-attention");
+  const diff = await getPullRequestDiff();
+  if (!diff || diff.length < 50) {
+    return;
   }
 
-  await applyLabels(labels);
+  const review = await runReview(diff) ?? FALLBACK_REVIEW;
 
-  // --- Comment body (unchanged) ---
+  // --- PR-level comment ---
   const body = `
 ## 🤖 AI PR Review
 
@@ -40,28 +29,35 @@ ${review.summary}
 
 ### ⚠️ Issues
 ${
-  review.issues.length > 0
-    ? review.issues
-        .map(
-          i =>
-            `- **[${i.severity}]** ${i.description}\n  👉 ${i.suggestion}`
-        )
-        .join("\n")
+  review.issues.length
+    ? review.issues.map(i => `- **[${i.severity}]** ${i.description}`).join("\n")
     : "_No issues found._"
 }
 
 ### 👍 Positives
 ${
-  review.positive_notes.length > 0
+  review.positive_notes.length
     ? review.positive_notes.map(p => `- ${p}`).join("\n")
     : "_No positives mentioned._"
 }
 `;
 
   await postReviewComment(body);
+
+  // --- File-level comments ---
+  for (const issue of review.issues) {
+    if (!issue.file || shouldSkipFile(issue.file)) continue;
+
+    await postFileComment({
+      path: issue.file,
+      body: `⚠️ **${issue.severity.toUpperCase()}**\n${issue.description}\n👉 ${issue.suggestion}`
+    });
+  }
+
+  // --- Labels ---
+  await applyLabels(review);
 }
 
 main().catch(err => {
-  console.error(err);
   process.exit(1);
 });
