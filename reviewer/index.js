@@ -24,7 +24,7 @@ async function main() {
   };
 
   const body = `
-## 🤖 AI PR Review
+## 🤖 AI PR Review this is a test PR for the AI PR Reviewer
 
 **Summary**  
 ${normalized.summary}
