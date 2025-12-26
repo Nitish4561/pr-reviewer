@@ -57,12 +57,10 @@ ${diff}
     });
 
     const text = res.output_text;
-    console.log("🤖 Raw LLM output:", text);
     if (!text) return FALLBACK_REVIEW;
 
     return JSON.parse(text);
   } catch (err) {
-    console.warn("⚠️ LLM review failed:", err.message);
     return FALLBACK_REVIEW;
   }
 }
