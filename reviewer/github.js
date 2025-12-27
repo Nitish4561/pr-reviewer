@@ -159,6 +159,9 @@ export async function getPullRequestFiles() {
   return res.data;
 }
 
+// Alias for backwards compatibility
+export const getPullRequestDiff = getPullRequestFiles;
+
 export async function postInlineComment({
   body,
   path,
@@ -245,6 +248,10 @@ export async function updatePRDescription(body) {
     throw err;
   }
 }
+
+// Wrappers for backwards compatibility
+export const createReviewComment = postInlineCommentAtLine;
+export const createReviewSummary = async ({ body }) => postReviewComment(body);
 
 export async function applyLabels(filesWithIssues, hasHighSeverity) {
   const labels = hasHighSeverity

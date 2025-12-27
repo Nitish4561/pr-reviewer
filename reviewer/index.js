@@ -211,13 +211,13 @@
  * Backend (Next.js / webhook) calls runPRReview().
  */
 
-import { getPullRequestDiff } from "./diff.js";
-import { generateReview } from "./llm.js";
+import { runReview } from "./llm.js";
 import {
-  createReviewComment,
-  createReviewSummary,
+  getPullRequestFiles,
+  postInlineCommentAtLine,
+  postReviewComment,
 } from "./github.js";
-import { buildPrompt } from "./prompt.js";
+import { buildReviewPrompt } from "./prompt.js";
 
 /**
  * Main callable function
@@ -243,8 +243,8 @@ export async function runPRReview({
 
   console.log(`🔍 Reviewing PR #${pull_number} in ${owner}/${repo}`);
 
-  // 1️⃣ Fetch PR diff
-  const files = await getPullRequestDiff({
+  // 1️⃣ Fetch PR files
+  const files = await getPullRequestFiles({
     owner,
     repo,
     pull_number,
@@ -263,15 +263,7 @@ export async function runPRReview({
   for (const file of files) {
     if (!file.patch) continue; // binary or removed files
 
-    const prompt = buildPrompt({
-      filename: file.filename,
-      diff: file.patch,
-    });
-
-    const review = await generateReview({
-      prompt,
-      openaiApiKey,
-    });
+    const review = await runReview(file.patch);
 
     if (!review?.issues?.length) continue;
 
