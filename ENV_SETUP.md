@@ -13,6 +13,9 @@ GITHUB_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----
 Your private key here (keep the line breaks)
 -----END RSA PRIVATE KEY-----"
 
+# GitHub App Slug (for installation link on landing page)
+NEXT_PUBLIC_GITHUB_APP_SLUG=your-app-slug-here
+
 # GitHub OAuth (for user login - REQUIRED for login button)
 NEXT_PUBLIC_GITHUB_CLIENT_ID=your_github_oauth_client_id_here
 GITHUB_CLIENT_SECRET=your_github_oauth_client_secret_here
@@ -27,9 +30,10 @@ OPENAI_API_KEY=sk-proj-your-openai-key-here
 ## Where to find these values:
 
 ### 1. GitHub App Credentials
-Go to your GitHub App settings:
+Go to your GitHub App settings (https://github.com/settings/apps):
 - **GITHUB_APP_ID**: Found in "About" section of your GitHub App
 - **GITHUB_PRIVATE_KEY**: Generate from "Private keys" section
+- **NEXT_PUBLIC_GITHUB_APP_SLUG**: Found in the URL of your app (e.g., if your app URL is `https://github.com/apps/nirikshanai`, the slug is `nirikshanai`)
 
 ### 2. GitHub OAuth (for login)
 You need to create a GitHub OAuth App (separate from GitHub App):
