@@ -25,6 +25,9 @@ GITHUB_WEBHOOK_SECRET=your_webhook_secret_here
 
 # OpenAI API Key (optional - can be set per installation via /settings page)
 OPENAI_API_KEY=sk-proj-your-openai-key-here
+
+# Admin Emails (comma-separated, for access control)
+ADMIN_EMAILS=your-email@example.com,another-admin@example.com
 ```
 
 ## Where to find these values:

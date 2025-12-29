@@ -20,6 +20,31 @@ interface Installation {
 }
 
 /**
+ * Access Request model
+ */
+interface AccessRequest {
+  id: string;
+  name: string;
+  email: string;
+  githubUsername?: string;
+  message?: string;
+  status: "pending" | "approved" | "rejected";
+  requestedAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+}
+
+/**
+ * Whitelisted User model
+ */
+interface WhitelistedUser {
+  email: string;
+  githubUsername?: string;
+  addedAt: string;
+  addedBy: string;
+}
+
+/**
  * User operations
  */
 interface UserOperations {
@@ -63,9 +88,50 @@ interface InstallationOperations {
   getAll(): Installation[];
 }
 
+/**
+ * Access Request operations
+ */
+interface AccessRequestOperations {
+  create(params: {
+    name: string;
+    email: string;
+    githubUsername?: string;
+    message?: string;
+  }): Promise<AccessRequest>;
+  
+  findAll(): AccessRequest[];
+  
+  findByEmail(email: string): AccessRequest | null;
+  
+  updateStatus(params: {
+    id: string;
+    status: "approved" | "rejected";
+    reviewedBy: string;
+  }): Promise<AccessRequest>;
+}
+
+/**
+ * Whitelist operations
+ */
+interface WhitelistOperations {
+  add(params: {
+    email: string;
+    githubUsername?: string;
+    addedBy: string;
+  }): Promise<WhitelistedUser>;
+  
+  remove(email: string): Promise<void>;
+  
+  isWhitelisted(email: string): boolean;
+  
+  findAll(): WhitelistedUser[];
+}
+
 interface Database {
   user: UserOperations;
   installation: InstallationOperations;
+  accessRequest: AccessRequestOperations;
+  whitelist: WhitelistOperations;
 }
 
 /**
@@ -73,6 +139,15 @@ interface Database {
  */
 const userStore = new Map<string, User>();
 const installationStore = new Map<number, Installation>();
+const accessRequestStore = new Map<string, AccessRequest>();
+const whitelistStore = new Map<string, WhitelistedUser>();
+
+// Admin emails (configurable)
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").filter(Boolean);
+
+function isAdmin(email: string): boolean {
+  return ADMIN_EMAILS.includes(email);
+}
 
 export const db: Database = {
   user: {
@@ -146,6 +221,96 @@ export const db: Database = {
 
     getAll() {
       return Array.from(installationStore.values());
+    },
+  },
+
+  accessRequest: {
+    async create({ name, email, githubUsername, message }) {
+      const id = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const request: AccessRequest = {
+        id,
+        name,
+        email,
+        githubUsername,
+        message,
+        status: "pending",
+        requestedAt: new Date().toISOString(),
+      };
+
+      accessRequestStore.set(id, request);
+      return request;
+    },
+
+    findAll() {
+      return Array.from(accessRequestStore.values()).sort(
+        (a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()
+      );
+    },
+
+    findByEmail(email: string) {
+      for (const request of accessRequestStore.values()) {
+        if (request.email.toLowerCase() === email.toLowerCase()) {
+          return request;
+        }
+      }
+      return null;
+    },
+
+    async updateStatus({ id, status, reviewedBy }) {
+      const request = accessRequestStore.get(id);
+      
+      if (!request) {
+        throw new Error("Access request not found");
+      }
+
+      const updated: AccessRequest = {
+        ...request,
+        status,
+        reviewedAt: new Date().toISOString(),
+        reviewedBy,
+      };
+
+      accessRequestStore.set(id, updated);
+
+      // If approved, add to whitelist
+      if (status === "approved") {
+        await db.whitelist.add({
+          email: request.email,
+          githubUsername: request.githubUsername,
+          addedBy: reviewedBy,
+        });
+      }
+
+      return updated;
+    },
+  },
+
+  whitelist: {
+    async add({ email, githubUsername, addedBy }) {
+      const user: WhitelistedUser = {
+        email: email.toLowerCase(),
+        githubUsername,
+        addedAt: new Date().toISOString(),
+        addedBy,
+      };
+
+      whitelistStore.set(email.toLowerCase(), user);
+      return user;
+    },
+
+    async remove(email: string) {
+      whitelistStore.delete(email.toLowerCase());
+    },
+
+    isWhitelisted(email: string) {
+      return whitelistStore.has(email.toLowerCase()) || isAdmin(email.toLowerCase());
+    },
+
+    findAll() {
+      return Array.from(whitelistStore.values()).sort(
+        (a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
+      );
     },
   },
 };
