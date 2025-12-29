@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { getInstallationOctokit } from "@/lib/github";
 
 /**
- * GitHub Webhook Secret (same as in GitHub App settings)
+ * GitHub Webhook Secret
  */
 const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET!;
 
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
 
     /**
      * ======================================================
-     * 1️⃣ GitHub App Installation Event
+     * 1️⃣ GitHub App Installation
      * ======================================================
      */
     if (event === "installation" && payload.action === "created") {
@@ -59,68 +59,91 @@ export async function POST(req: Request) {
           fullName: repo.full_name,
         })) ?? [];
 
-      console.log("✅ App installed on:", accountLogin);
-      console.log("📦 Installation ID:", installationId);
-      console.log("📦 Repositories:", repositories.map((r: any) => r.fullName));
-
       await db.installation.saveInstallation({
         installationId,
         accountLogin,
         repositories,
       });
 
+      console.log("✅ App installed:", installationId);
       return NextResponse.json({ ok: true });
     }
 
     /**
      * ======================================================
-     * 2️⃣ Pull Request Opened / Updated
+     * 2️⃣ Pull Request Events
      * ======================================================
      */
     if (event === "pull_request") {
       const action = payload.action;
 
-      if (action === "opened" || action === "synchronize") {
-        const repoId = payload.repository.id;
-        const owner = payload.repository.owner.login;
-        const repo = payload.repository.name;
-        const pull_number = payload.pull_request.number;
+      if (action !== "opened" && action !== "synchronize") {
+        return NextResponse.json({ ok: true });
+      }
 
-        console.log("🚀 PR received:", payload.pull_request.html_url);
+      const owner = payload.repository.owner.login;
+      const repo = payload.repository.name;
+      const pull_number = payload.pull_request.number;
+      const installationId = payload.installation.id;
 
-        // 🔍 Find installation for this repository
-        const installation = await db.installation.findByRepoId(repoId);
+      console.log("🚀 PR received:", payload.pull_request.html_url);
+      console.log("🔑 Installation ID from webhook:", installationId);
 
-        if (!installation) {
-          console.error("❌ No installation found for repo:", repoId);
-          return NextResponse.json({ ok: true });
-        }
+      // 🔍 Find installation by ID (from webhook payload)
+      const installation = await db.installation.findUnique({
+        where: { installationId },
+      });
 
-        console.log(
-          "🔑 Using installation:",
-          installation.installationId
-        );
+      if (!installation) {
+        console.error("❌ No installation found for ID:", installationId);
+        return NextResponse.json({ ok: true });
+      }
 
-        // 🔐 Create authenticated GitHub client
+      console.log("📦 Installation found:", {
+        installationId: installation.installationId,
+        hasOpenAIKey: !!installation.openaiKey,
+        openaiKeyLength: installation.openaiKey?.length,
+      });
+
+      if (!installation.openaiKey) {
+        console.warn("⚠️ OpenAI key not configured");
+
         const octokit = await getInstallationOctokit(
           installation.installationId
         );
 
-        // 🤖 Run AI PR review
-        const { runPRReview } = await import("@/reviewer/index.js");
-
-        await runPRReview({
+        await octokit.rest.issues.createComment({
           owner,
           repo,
-          pull_number,
-          octokit,
-          openaiApiKey: process.env.OPENAI_API_KEY!,
+          issue_number: pull_number,
+          body:
+            "❌ **AI review is not enabled**\n\n" +
+            "Please add your OpenAI API key in the app settings.",
         });
-
-        console.log("✅ PR review triggered");
 
         return NextResponse.json({ ok: true });
       }
+
+      console.log("🔑 Using installation:", installation.installationId);
+
+      // 🔐 GitHub client
+      const octokit = await getInstallationOctokit(
+        installation.installationId
+      );
+
+      // 🤖 Run PR Review using our reviewer system
+      const { runPRReview } = await import("@/reviewer/index.js");
+
+      await runPRReview({
+        octokit,
+        owner,
+        repo,
+        pull_number,
+        openaiApiKey: installation.openaiKey,
+      });
+
+      console.log("✅ PR review completed");
+      return NextResponse.json({ ok: true });
     }
 
     /**
@@ -128,14 +151,13 @@ export async function POST(req: Request) {
      * 3️⃣ Ignore Other Events
      * ======================================================
      */
-    console.log("ℹ️ Ignored event:", event);
     return NextResponse.json({ ok: true });
 
   } catch (err: any) {
     console.error("🔥 Webhook crashed:", err);
     console.error("🔥 Payload:", bodyText);
 
-    // IMPORTANT: Always return 200 so GitHub doesn't retry forever
+    // Always return 200 to prevent retries
     return NextResponse.json({ ok: true });
   }
 }

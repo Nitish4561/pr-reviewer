@@ -1,20 +1,11 @@
 import jwt from "jsonwebtoken";
 import { Octokit } from "@octokit/rest";
-
-/* ------------------------------------------------------------------ */
-/* 🔐 GitHub App Auth                                                   */
-/* ------------------------------------------------------------------ */
-
 const APP_ID = process.env.GITHUB_APP_ID!;
 const PRIVATE_KEY = process.env.GITHUB_PRIVATE_KEY!.replace(/\\n/g, "\n");
 
 if (!APP_ID || !PRIVATE_KEY) {
   throw new Error("Missing GITHUB_APP_ID or GITHUB_PRIVATE_KEY");
 }
-
-/**
- * Create an authenticated Octokit instance for a GitHub App installation
- */
 export async function getInstallationOctokit(
   installationId: number
 ): Promise<Octokit> {
@@ -94,6 +85,7 @@ interface InlineCommentArgs {
   owner: string;
   repo: string;
   pull_number: number;
+  commit_id: string;
   path: string;
   line: number;
   body: string;
@@ -109,6 +101,7 @@ export async function postInlineCommentAtLine({
   owner,
   repo,
   pull_number,
+  commit_id,
   path,
   line,
   body,
@@ -123,6 +116,7 @@ export async function postInlineCommentAtLine({
       owner,
       repo,
       pull_number,
+      commit_id,
       body,
       path,
       line,

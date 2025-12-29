@@ -15,7 +15,7 @@ export async function GET(req: Request) {
       method: "POST",
       headers: { Accept: "application/json" },
       body: new URLSearchParams({
-        client_id: process.env.GITHUB_CLIENT_ID!,
+        client_id: process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID!,
         client_secret: process.env.GITHUB_CLIENT_SECRET!,
         code,
       }),
@@ -36,5 +36,6 @@ export async function GET(req: Request) {
   // Step 3: save user (DB later)
   // user.id, user.login, access_token
 
-  return NextResponse.redirect("http://localhost:3000/dashboard");
+  return NextResponse.redirect("http://localhost:4002/settings");
 }
+
