@@ -31,15 +31,12 @@ export async function runPRReview({
   const key = openaiApiKey || process.env.OPENAI_API_KEY;
   if (!key) throw new Error("Missing OpenAI API key");
 
-  console.log(`🔍 Reviewing PR #${pull_number} → ${owner}/${repo}`);
-
   // 1️⃣ Fetch PR + files
   const pr = await getPullRequest({ octokit, owner, repo, pull_number });
   const files = await getPullRequestFiles({ octokit, owner, repo, pull_number });
   const commit_id = pr.head.sha;
 
   if (!files.length) {
-    console.log("⚠️ No changed files");
     return;
   }
 
@@ -49,16 +46,12 @@ export async function runPRReview({
 
   for (const file of files) {
     if (!file.patch) continue; // binary / deleted
-    console.log(`📄 Reviewing ${file.filename}`);
 
     const review = await runReview(file.patch, key); // pass OpenAI key
 
     if (!review?.issues?.length) {
-      console.log(`   ✅ No issues found`);
       continue;
     }
-
-    console.log(`   📝 Found ${review.issues.length} issues`);
 
     for (const issue of review.issues) {
       if (!issue.line) {
@@ -117,7 +110,7 @@ ${issue.suggestion}`,
     }
 
     summaryBody += `---\n`;
-    summaryBody += `⚙️ Reviewed automatically by **AI PR Reviewer**`;
+    summaryBody += `⚙️ Reviewed automatically by **NirikshanAI**`;
   }
 
   await createReviewSummary({
@@ -130,6 +123,4 @@ ${issue.suggestion}`,
 
   // 4️⃣ Apply labels
   await applyLabels({ octokit, owner, repo, pull_number, hasHighSeverity });
-
-  console.log("✅ PR review completed");
 }

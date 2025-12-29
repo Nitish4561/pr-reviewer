@@ -40,9 +40,6 @@ export async function POST(req: Request) {
 
     const payload = JSON.parse(bodyText);
 
-    console.log("📦 GitHub Event:", event);
-    console.log("📦 Action:", payload.action);
-
     /**
      * ======================================================
      * 1️⃣ GitHub App Installation
@@ -65,7 +62,6 @@ export async function POST(req: Request) {
         repositories,
       });
 
-      console.log("✅ App installed:", installationId);
       return NextResponse.json({ ok: true });
     }
 
@@ -86,9 +82,6 @@ export async function POST(req: Request) {
       const pull_number = payload.pull_request.number;
       const installationId = payload.installation.id;
 
-      console.log("🚀 PR received:", payload.pull_request.html_url);
-      console.log("🔑 Installation ID from webhook:", installationId);
-
       // 🔍 Find installation by ID (from webhook payload)
       const installation = await db.installation.findUnique({
         where: { installationId },
@@ -98,12 +91,6 @@ export async function POST(req: Request) {
         console.error("❌ No installation found for ID:", installationId);
         return NextResponse.json({ ok: true });
       }
-
-      console.log("📦 Installation found:", {
-        installationId: installation.installationId,
-        hasOpenAIKey: !!installation.openaiKey,
-        openaiKeyLength: installation.openaiKey?.length,
-      });
 
       if (!installation.openaiKey) {
         console.warn("⚠️ OpenAI key not configured");
@@ -124,8 +111,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true });
       }
 
-      console.log("🔑 Using installation:", installation.installationId);
-
       // 🔐 GitHub client
       const octokit = await getInstallationOctokit(
         installation.installationId
@@ -142,7 +127,6 @@ export async function POST(req: Request) {
         openaiApiKey: installation.openaiKey,
       });
 
-      console.log("✅ PR review completed");
       return NextResponse.json({ ok: true });
     }
 

@@ -108,34 +108,14 @@ export const db: Database = {
         repoIds,
         openaiKey: openaiKey || existing?.openaiKey, // Preserve existing key if not provided
       });
-
-      console.log("💾 Stored installation:", {
-        installationId,
-        accountLogin,
-        repoIds,
-        hasOpenAIKey: !!(openaiKey || existing?.openaiKey),
-      });
     },
 
     async findByRepoId(repoId: number) {
-      console.log("🔍 Looking up installation by repoId:", repoId);
-      console.log("📦 Current installations:", Array.from(installationStore.entries()).map(([id, inst]) => ({
-        id,
-        accountLogin: inst.accountLogin,
-        repoIds: inst.repoIds,
-        hasOpenAIKey: !!inst.openaiKey,
-      })));
-      
       for (const installation of installationStore.values()) {
         if (installation.repoIds.includes(repoId)) {
-          console.log("✅ Found installation:", {
-            installationId: installation.installationId,
-            hasOpenAIKey: !!installation.openaiKey,
-          });
           return installation;
         }
       }
-      console.log("❌ No installation found for repoId:", repoId);
       return null;
     },
 
@@ -150,10 +130,6 @@ export const db: Database = {
       if (existing) {
         const updated = { ...existing, ...update };
         installationStore.set(where.installationId, updated);
-        console.log("💾 Updated installation:", {
-          installationId: where.installationId,
-          openaiKey: updated.openaiKey ? "✅ SET" : "❌ NOT SET",
-        });
         return updated;
       }
 
@@ -165,10 +141,6 @@ export const db: Database = {
       };
 
       installationStore.set(create.installationId, newInstallation);
-      console.log("💾 Created installation:", {
-        installationId: create.installationId,
-        openaiKey: create.openaiKey ? "✅ SET" : "❌ NOT SET",
-      });
       return newInstallation;
     },
 

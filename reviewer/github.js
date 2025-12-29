@@ -1,5 +1,5 @@
 /**
- * GitHub helpers for AI PR Reviewer
+ * GitHub helpers for NirikshanAI
  * Works with GitHub App installation tokens
  */
 
@@ -57,8 +57,6 @@ export async function createReviewComment({
       side: "RIGHT", // required
       body,
     });
-
-    console.log(`📝 Inline comment posted → ${path}:${line}`);
   } catch (err) {
     console.error("❌ Inline comment failed");
     console.error({

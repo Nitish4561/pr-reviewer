@@ -8,8 +8,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing data" }, { status: 400 });
   }
 
-  console.log("🔑 Saving OpenAI key for installation:", installationId, typeof installationId);
-
   await db.installation.upsert({
     where: { installationId: Number(installationId) },
     update: { openaiKey },

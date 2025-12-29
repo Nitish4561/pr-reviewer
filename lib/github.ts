@@ -123,7 +123,6 @@ export async function postInlineCommentAtLine({
       side: "RIGHT",
     });
 
-    console.log(`📝 Inline comment posted → ${path}:${line}`);
     return true;
   } catch (err: any) {
     console.error("❌ Inline comment failed", {

@@ -1,4 +1,4 @@
-# AI PR Reviewer (Internal Tool)
+# NirikshanAI (Internal Tool)
 
 An internal tool to automatically review pull requests using OpenAI’s GPT models.  
 It analyzes PR diffs, generates a structured review, posts comments, and applies labels.

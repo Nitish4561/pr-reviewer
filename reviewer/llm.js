@@ -58,9 +58,6 @@ export async function runReview(diff, openaiApiKey) {
   try {
     let content = data.choices[0].message.content;
     
-    // Log raw response for debugging
-    console.log("📥 Raw AI response:", content.substring(0, 200));
-    
     // Clean up response if needed
     content = content.trim();
     
@@ -74,7 +71,6 @@ export async function runReview(diff, openaiApiKey) {
     // Validate that we have issues array
     if (!review.issues || !Array.isArray(review.issues)) {
       console.warn("⚠️ AI response missing issues array");
-      console.log("Response was:", review);
       return { issues: [] };
     }
 
@@ -91,12 +87,6 @@ export async function runReview(diff, openaiApiKey) {
       }
       return true;
     });
-
-    console.log(`✅ Found ${validIssues.length} valid issues with line numbers`);
-    
-    if (validIssues.length > 0) {
-      console.log("First issue example:", JSON.stringify(validIssues[0], null, 2));
-    }
     
     return { issues: validIssues };
   } catch (err) {

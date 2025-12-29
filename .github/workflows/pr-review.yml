@@ -1,4 +1,4 @@
-name: AI PR Reviewer
+name: NirikshanAI
 
 on:
   pull_request:
