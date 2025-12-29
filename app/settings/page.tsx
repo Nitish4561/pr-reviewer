@@ -68,7 +68,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div style={{ maxWidth: 600, margin: "80px auto", padding: 20 }}>
-        <h1>⚙️ PR Reviewer Settings</h1>
+        <h1>⚙️ NirikshanAI Settings</h1>
         <p>Loading...</p>
       </div>
     );
@@ -77,7 +77,7 @@ export default function SettingsPage() {
   if (!installation) {
     return (
       <div style={{ maxWidth: 600, margin: "80px auto", padding: 20 }}>
-        <h1>⚙️ PR Reviewer Settings</h1>
+        <h1>⚙️ NirikshanAI Settings</h1>
         <div style={{ marginTop: 20, padding: 15, backgroundColor: "#fff3cd", borderRadius: 4 }}>
           <strong>⚠️ No active installation found</strong>
           <p>Install the GitHub App on a repository first.</p>
@@ -88,7 +88,7 @@ export default function SettingsPage() {
 
   return (
     <div style={{ maxWidth: 600, margin: "80px auto", padding: 20 }}>
-      <h1>⚙️ PR Reviewer Settings</h1>
+      <h1>⚙️ NirikshanAI Settings</h1>
       
       <div style={{ marginTop: 20, padding: 15, backgroundColor: "#f8f9fa", borderRadius: 4 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
