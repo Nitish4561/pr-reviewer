@@ -1,225 +1,87 @@
-// import { Octokit } from "@octokit/rest";
+/**
+ * GitHub helpers for NirikshanAI
+ * Works with GitHub App installation tokens
+ */
 
-// const octokit = new Octokit({
-//   auth: process.env.GITHUB_TOKEN
-// });
-
-// const owner = process.env.REPO_OWNER;
-// const repo = process.env.REPO_NAME;
-// const pull_number = Number(process.env.PR_NUMBER);
-
-// export async function getPullRequest() {
-//   const { data } = await octokit.rest.pulls.get({
-//     owner,
-//     repo,
-//     pull_number
-//   });
-//   return data;
-// }
-
-// export async function getPullRequestDiff() {
-//   const res = await octokit.request(
-//     "GET /repos/{owner}/{repo}/pulls/{pull_number}",
-//     {
-//       owner,
-//       repo,
-//       pull_number,
-//       headers: { accept: "application/vnd.github.v3.diff" }
-//     }
-//   );
-//   return res.data;
-// }
-
-// export async function postReviewComment(body) {
-//   await octokit.rest.issues.createComment({
-//     owner,
-//     repo,
-//     issue_number: pull_number,
-//     body
-//   });
-// }
-
-// export async function postFileComment({ path, body }) {
-//   await octokit.request(
-//     "POST /repos/{owner}/{repo}/pulls/{pull_number}/comments",
-//     {
-//       owner,
-//       repo,
-//       pull_number,
-//       body,
-//       path,
-//       side: "RIGHT",
-//       line: 1
-//     }
-//   );
-// }
-
-// export async function applyLabels(review) {
-//   let labels = [];
-
-//   if (review.summary?.toLowerCase().includes("failed")) {
-//     labels.push("ai-failed");
-//   } else if (review.issues.length === 0) {
-//     labels.push("ai-clean");
-//   } else {
-//     labels.push("ai-needs-attention");
-//   }
-
-//   await octokit.rest.issues.addLabels({
-//     owner,
-//     repo,
-//     issue_number: pull_number,
-//     labels
-//   });
-// }
 import { Octokit } from "@octokit/rest";
 
-const octokit = new Octokit({
-  auth: process.env.GITHUB_TOKEN,
-});
+/* ----------------------------------------
+   Pull Request helpers
+----------------------------------------- */
 
-const owner = process.env.REPO_OWNER;
-const repo = process.env.REPO_NAME;
-const pull_number = Number(process.env.PR_NUMBER);
-
-/* -------------------- PATCH HELPERS -------------------- */
-
-function getSafeLineFromPatch(patch) {
-  if (!patch) return null;
-
-  const lines = patch.split("\n");
-  let currentLine = null;
-
-  for (const line of lines) {
-    const hunk = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
-    if (hunk) {
-      currentLine = Number(hunk[1]);
-      continue;
-    }
-
-    if (currentLine !== null) {
-      if (line.startsWith("+") && !line.startsWith("+++")) {
-        return currentLine;
-      }
-
-      if (line.startsWith(" ") || line.startsWith("+")) {
-        currentLine++;
-      }
-    }
-  }
-
-  return currentLine;
-}
-
-function isLineInPatch(patch, targetLine) {
-  if (!patch || !targetLine) return false;
-
-  const lines = patch.split("\n");
-  let currentLine = null;
-
-  for (const line of lines) {
-    const hunk = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
-    if (hunk) {
-      currentLine = Number(hunk[1]);
-      continue;
-    }
-
-    if (currentLine !== null) {
-      if (line.startsWith("+") && !line.startsWith("+++")) {
-        if (currentLine === targetLine) return true;
-        currentLine++;
-      } else if (line.startsWith(" ")) {
-        if (currentLine === targetLine) return true;
-        currentLine++;
-      }
-    }
-  }
-
-  return false;
-}
-
-/* -------------------- GITHUB API -------------------- */
-
-export async function getPullRequest() {
-  const res = await octokit.rest.pulls.get({
+export async function getPullRequest({ octokit, owner, repo, pull_number }) {
+  const { data } = await octokit.pulls.get({
     owner,
     repo,
     pull_number,
   });
-  return res.data;
+  return data;
 }
 
-export async function getPullRequestFiles() {
-  const res = await octokit.rest.pulls.listFiles({
+export async function getPullRequestFiles({ octokit, owner, repo, pull_number }) {
+  const { data } = await octokit.pulls.listFiles({
     owner,
     repo,
     pull_number,
     per_page: 100,
   });
-  return res.data;
+  return data;
 }
 
-export async function postInlineComment({
-  body,
-  path,
-  commit_id,
-  patch,
-}) {
-  const line = getSafeLineFromPatch(patch);
-  if (!line) return false;
+/* ----------------------------------------
+   Inline Review Comment (IMPORTANT)
+----------------------------------------- */
 
-  try {
-    await octokit.rest.pulls.createReviewComment({
-      owner,
-      repo,
-      pull_number,
-      body,
-      path,
-      commit_id,
-      line,
-      side: "RIGHT",
-    });
-    return true;
-  } catch (err) {
-    console.error("Failed to post inline comment:", err);
-    return false;
-  }
-}
-
-export async function postInlineCommentAtLine({
-  body,
-  path,
+/**
+ * Create an inline review comment
+ * This is the ONLY correct way to do it
+ */
+export async function createReviewComment({
+  octokit,
+  owner,
+  repo,
+  pull_number,
   commit_id,
+  path,
   line,
-  patch,
+  body,
 }) {
-  let target = line;
-
-  if (!isLineInPatch(patch, line)) {
-    target = getSafeLineFromPatch(patch);
-    if (!target) return false;
-  }
-
   try {
-    await octokit.rest.pulls.createReviewComment({
+    await octokit.pulls.createReviewComment({
       owner,
       repo,
       pull_number,
-      body,
-      path,
       commit_id,
-      line: target,
-      side: "RIGHT",
+      path,
+      line,
+      side: "RIGHT", // required
+      body,
     });
-    return true;
   } catch (err) {
-    console.error("Failed to post inline comment at line:", err);
-    return false;
+    console.error("❌ Inline comment failed");
+    console.error({
+      owner,
+      repo,
+      pull_number,
+      path,
+      line,
+      error: err.message,
+    });
   }
 }
 
-export async function postReviewComment(body) {
-  await octokit.rest.issues.createComment({
+/* ----------------------------------------
+   PR-level comment (summary)
+----------------------------------------- */
+
+export async function createReviewSummary({
+  octokit,
+  owner,
+  repo,
+  pull_number,
+  body,
+}) {
+  await octokit.issues.createComment({
     owner,
     repo,
     issue_number: pull_number,
@@ -227,33 +89,22 @@ export async function postReviewComment(body) {
   });
 }
 
-export async function updatePRDescription(body) {
-  try {
-    await octokit.rest.pulls.update({
-      owner,
-      repo,
-      pull_number,
-      body,
-    });
-  } catch (err) {
-    console.error("❌ Failed to update PR description:");
-    console.error("Error:", err.message);
-    if (err.response) {
-      console.error("Status:", err.response.status);
-      console.error("Data:", JSON.stringify(err.response.data, null, 2));
-    }
-    throw err;
-  }
-}
+/* ----------------------------------------
+   Labels (optional)
+----------------------------------------- */
 
-export async function applyLabels(filesWithIssues, hasHighSeverity) {
+export async function applyLabels({
+  octokit,
+  owner,
+  repo,
+  pull_number,
+  hasHighSeverity,
+}) {
   const labels = hasHighSeverity
     ? ["ai-critical"]
-    : filesWithIssues > 0
-    ? ["ai-needs-attention"]
-    : ["ai-clean"];
+    : ["ai-reviewed"];
 
-  await octokit.rest.issues.addLabels({
+  await octokit.issues.addLabels({
     owner,
     repo,
     issue_number: pull_number,

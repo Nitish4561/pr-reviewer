@@ -1,205 +1,126 @@
-// import { getPullRequestDiff, postReviewComment, applyLabels } from "./github.js";
-// import { runReview, FALLBACK_REVIEW } from "./llm.js";
+/**
+ * reviewer/index.js
+ *
+ * Pure callable service for PR review.
+ * Called from webhook after PR event.
+ */
 
-// console.log("🔥 reviewer/index.js LOADED");
-
-// async function main() {
-//   console.log("🚀 Reviewer started");
-
-//   // Fetch the PR diff
-//   const diff = await getPullRequestDiff();
-//   console.log("📄 Diff length:", diff?.length ?? "undefined");
-
-//   // Skip very small diffs
-//   if (!diff || diff.length < 10) {
-//     console.log("⚠️ PR diff too small, skipping review.");
-//     return;
-//   }
-
-//   // Run the AI review
-//   const review = await runReview(diff);
-//   console.log("🤖 AI review completed:", review);
-
-//   // Build the PR comment
-//   const commentBody = `
-// ## 🤖 AI PR Review
-
-// **Summary:**  
-// ${review.summary ?? "No summary provided"}
-
-// **Quality Score:** ${review.quality_score ?? 0}/10  
-// **Should Block Merge:** ${review.should_block_merge ? "❌ Yes" : "✅ No"}
-
-// ### ⚠️ Issues
-// ${
-//   review.issues?.length > 0
-//     ? review.issues.map(i => `- [${i.severity}] ${i.description}\n  👉 ${i.suggestion}`).join("\n")
-//     : "_No issues found._"
-// }
-
-// ### 👍 Positives
-// ${
-//   review.positive_notes?.length > 0
-//     ? review.positive_notes.map(p => `- ${p}`).join("\n")
-//     : "_No positives mentioned._"
-// }
-// `;
-
-//   // Post the comment to GitHub
-//   console.log("📝 Posting PR comment...");
-//   await postReviewComment(commentBody);
-//   console.log("✅ PR comment posted");
-
-//   // Optional: Apply labels based on review
-//   if (typeof applyLabels === "function") {
-//     console.log("🏷️ Applying labels based on review...");
-//     await applyLabels(review);
-//     console.log("✅ Labels applied");
-//   }
-// }
-
-// main().catch(err => {
-//   console.error("❌ Reviewer failed:", err);
-//   process.exit(1);
-// });
+import { runReview } from "./llm.js";
 import {
   getPullRequest,
   getPullRequestFiles,
-  postInlineComment,
-  postInlineCommentAtLine,
-  postReviewComment,
-  updatePRDescription,
+  createReviewComment,
+  createReviewSummary,
   applyLabels,
 } from "./github.js";
 
-import { runReview } from "./llm.js";
-import { generatePRReview } from "./pr-description.js";
-
-async function main() {
-  const pr = await getPullRequest();
-  const files = await getPullRequestFiles();
-  const commit_id = pr.head.sha;
-
-  /* ---------- OVERALL PR REVIEW ---------- */
-
-  const SHOULD_GENERATE_REVIEW =
-    !pr.body || pr.body.includes("<!-- ai-generated -->");
-
-  let overallReview = null;
-
-  if (SHOULD_GENERATE_REVIEW) {
-    overallReview = await generatePRReview({
-      title: pr.title,
-      originalBody: pr.body,
-      files,
-    });
-
-    if (overallReview) {
-      await updatePRDescription(
-        `<!-- ai-generated -->\n${overallReview.summary}`
-      );
-    } else {
-      console.warn("⚠️ Failed to generate overall PR review - review will be skipped");
-    }
+/**
+ * Run AI PR Review
+ */
+export async function runPRReview({
+  octokit,
+  owner,
+  repo,
+  pull_number,
+  openaiApiKey, // pass OpenAI key here
+}) {
+  if (!octokit || !owner || !repo || !pull_number) {
+    throw new Error("Missing required PR review parameters");
   }
 
+  const key = openaiApiKey || process.env.OPENAI_API_KEY;
+  if (!key) throw new Error("Missing OpenAI API key");
 
-  let filesWithIssues = 0;
+  // 1️⃣ Fetch PR + files
+  const pr = await getPullRequest({ octokit, owner, repo, pull_number });
+  const files = await getPullRequestFiles({ octokit, owner, repo, pull_number });
+  const commit_id = pr.head.sha;
+
+  if (!files.length) {
+    return;
+  }
+
+  // 2️⃣ Review files individually
+  const summaryIssues = [];
   let hasHighSeverity = false;
-  let inlinePosted = 0;
-  let inlineFailed = 0;
 
   for (const file of files) {
-    if (!file.patch) continue;
+    if (!file.patch) continue; // binary / deleted
 
-    const review = await runReview(file.patch);
+    const review = await runReview(file.patch, key); // pass OpenAI key
 
-    if (!review?.issues?.length) continue;
-
-    filesWithIssues++;
-
-    if (review.issues.some(i => i.severity === "high")) {
-      hasHighSeverity = true;
+    if (!review?.issues?.length) {
+      continue;
     }
 
     for (const issue of review.issues) {
-      const body = `**[${issue.severity.toUpperCase()}]**
+      if (!issue.line) {
+        console.warn(`   ⚠️ Skipping issue without line number`);
+        continue;
+      }
+
+      if (issue.severity === "high") hasHighSeverity = true;
+
+      // Post inline comment
+      await createReviewComment({
+        octokit,
+        owner,
+        repo,
+        pull_number,
+        commit_id,
+        path: file.filename,
+        line: issue.line,
+        body: `**🔴 ${issue.severity.toUpperCase()}**
+
 ${issue.description}
 
-💡 **Suggestion**
-${issue.suggestion}`;
+**💡 Suggestion:**
+${issue.suggestion}`,
+      });
 
-      let success = false;
-
-      if (issue.line) {
-        success = await postInlineCommentAtLine({
-          body,
-          path: file.filename,
-          commit_id,
-          line: issue.line,
-          patch: file.patch,
-        });
-      }
-
-      if (!success) {
-        success = await postInlineComment({
-          body,
-          path: file.filename,
-          commit_id,
-          patch: file.patch,
-        });
-      }
-
-      if (success) {
-        inlinePosted++;
-      } else {
-        inlineFailed++;
-        await postReviewComment(
-          `📁 **${file.filename}**\n\n${body}`
-        );
-      }
+      summaryIssues.push({
+        file: file.filename,
+        line: issue.line,
+        title: issue.description,
+        severity: issue.severity || "medium",
+      });
     }
   }
 
-  /* ---------- SUMMARY ---------- */
+  // 3️⃣ Final PR summary
+  let summaryBody;
+  if (summaryIssues.length === 0) {
+    summaryBody = `🤖 **AI PR Review**
 
-  let summaryComment = `🤖 **AI PR Review**\n\n`;
-
-  // Add overall review if available
-  if (overallReview) {
-    summaryComment += `**Summary:**\n${overallReview.summary}\n\n`;
-    summaryComment += `**Quality Score:** ${overallReview.quality_score}/10\n`;
-    summaryComment += `**Should Block Merge:** ${overallReview.should_block_merge ? "❌ Yes" : "✅ No"}\n\n`;
-    
-    if (overallReview.positive_notes && overallReview.positive_notes.length > 0) {
-      summaryComment += overallReview.positive_notes.map(note => `- ${note}`).join("\n");
-      summaryComment += "\n\n";
+✅ No issues found across changed files.`;
+  } else {
+    summaryBody = `## 🤖 AI PR Review Summary\n\n`;
+    const grouped = {};
+    for (const issue of summaryIssues) {
+      grouped[issue.file] = grouped[issue.file] || [];
+      grouped[issue.file].push(issue);
     }
-    
-    summaryComment += "---\n\n";
+
+    for (const file in grouped) {
+      summaryBody += `### 📄 ${file}\n`;
+      grouped[file].forEach((i) => {
+        summaryBody += `- **${i.severity.toUpperCase()}** (Line ${i.line}) — ${i.title}\n`;
+      });
+      summaryBody += "\n";
+    }
+
+    summaryBody += `---\n`;
+    summaryBody += `⚙️ Reviewed automatically by **NirikshanAI**`;
   }
 
-  // Add file-level review summary
-  summaryComment += `${
-    filesWithIssues > 0
-      ? `❌ Found **${filesWithIssues} file(s)** with issues.`
-      : `✅ No issues found across changed files.`
-  }\n\n`;
-  
-  summaryComment += `💬 Inline comments posted: **${inlinePosted}**\n`;
-  summaryComment += `⚠️ Fallback comments: **${inlineFailed}**\n`;
-  
-  if (hasHighSeverity) {
-    summaryComment += `\n🚨 High severity issues detected.`;
-  }
+  await createReviewSummary({
+    octokit,
+    owner,
+    repo,
+    pull_number,
+    body: summaryBody,
+  });
 
-  await postReviewComment(summaryComment);
-
-  await applyLabels(filesWithIssues, hasHighSeverity);
-
+  // 4️⃣ Apply labels
+  await applyLabels({ octokit, owner, repo, pull_number, hasHighSeverity });
 }
-
-main().catch(err => {
-  console.error("❌ Reviewer crashed:", err);
-  process.exit(1);
-});
