@@ -1,7 +1,5 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 interface SendApprovalEmailParams {
   to: string;
   name: string;
@@ -15,6 +13,16 @@ export async function sendApprovalEmail({
   installationLink,
   dashboardLink,
 }: SendApprovalEmailParams) {
+  // Initialize Resend only when sending (not at module load time)
+  const apiKey = process.env.RESEND_API_KEY;
+  
+  if (!apiKey) {
+    console.warn("⚠️ RESEND_API_KEY not configured - skipping email");
+    return null;
+  }
+
+  const resend = new Resend(apiKey);
+
   try {
     const { data, error } = await resend.emails.send({
       from: process.env.EMAIL_FROM || "NirikshanAI <onboarding@resend.dev>",
