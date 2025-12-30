@@ -13,6 +13,12 @@ const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET!;
  */
 function verifySignature(payload: string, signature: string) {
   if (!signature) return false;
+  
+  // If webhook secret is not configured, skip verification (dev mode)
+  if (!WEBHOOK_SECRET) {
+    console.warn("⚠️ GITHUB_WEBHOOK_SECRET not set - skipping signature verification");
+    return true;
+  }
 
   const hmac = crypto.createHmac("sha256", WEBHOOK_SECRET);
   const digest = `sha256=${hmac.update(payload).digest("hex")}`;
