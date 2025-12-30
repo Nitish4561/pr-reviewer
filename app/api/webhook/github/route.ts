@@ -92,6 +92,42 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true });
       }
 
+      // 🔒 Check if user is whitelisted (WHITELIST ENFORCEMENT)
+      const accountLogin = installation.accountLogin;
+      const accountEmail = payload.repository?.owner?.email || payload.sender?.email;
+      
+      // Check whitelist by email or username
+      let isWhitelisted = false;
+      if (accountEmail) {
+        isWhitelisted = db.whitelist.isWhitelisted(accountEmail);
+      }
+      
+      console.log(`🔍 Whitelist check for ${accountLogin} (${accountEmail}): ${isWhitelisted ? '✅ APPROVED' : '❌ DENIED'}`);
+
+      if (!isWhitelisted) {
+        console.warn(`🚫 Access denied for ${accountLogin} - not whitelisted`);
+
+        const octokit = await getInstallationOctokit(
+          installation.installationId
+        );
+
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:4002";
+
+        await octokit.rest.issues.createComment({
+          owner,
+          repo,
+          issue_number: pull_number,
+          body:
+            "🔒 **Beta Access Required**\n\n" +
+            `NirikshanAI is currently in private beta. Only approved users can get AI code reviews.\n\n` +
+            `**Request Access:**\n` +
+            `👉 ${baseUrl}\n\n` +
+            `Once approved, your PRs will be automatically reviewed!`,
+        });
+
+        return NextResponse.json({ ok: true });
+      }
+
       if (!installation.openaiKey) {
         console.warn("⚠️ OpenAI key not configured");
 

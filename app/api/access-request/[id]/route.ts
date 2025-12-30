@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { sendApprovalEmail } from "@/lib/email";
 
 /**
  * PATCH - Approve or reject access request (admin only)
@@ -41,9 +42,30 @@ export async function PATCH(
       reviewedBy,
     });
 
+    // Send approval email if status is approved
+    if (status === "approved") {
+      try {
+        const appSlug = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG || "nirikshanai";
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:4002";
+        
+        await sendApprovalEmail({
+          to: updated.email,
+          name: updated.name,
+          installationLink: `https://github.com/apps/${appSlug}/installations/new`,
+          dashboardLink: `${baseUrl}/dashboard`,
+        });
+        
+        console.log(`✅ Approval email sent to ${updated.email}`);
+      } catch (emailError) {
+        console.error("Failed to send approval email:", emailError);
+        // Don't fail the request if email fails
+      }
+    }
+
     return NextResponse.json({
       success: true,
       request: updated,
+      emailSent: status === "approved",
     });
   } catch (error: any) {
     console.error("Error updating access request:", error);
