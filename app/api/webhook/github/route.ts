@@ -134,54 +134,10 @@ export async function POST(req: Request) {
         console.log(`   OpenAI Key: ${installation.openaiKey.substring(0, 20)}...`);
       }
 
-      // 🔒 Check if user is whitelisted (WHITELIST ENFORCEMENT)
+      // 🔒 WHITELIST CHECK DISABLED FOR TESTING
+      // TODO: Re-enable whitelist for production
       const accountLogin = installation.accountLogin;
-      const accountEmail = payload.repository?.owner?.email || payload.sender?.email;
-      const senderEmail = payload.sender?.email;
-      
-      // Admin emails - auto-whitelist
-      const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").filter(Boolean);
-      const isAdmin = accountEmail && adminEmails.some(admin => 
-        admin.toLowerCase() === accountEmail.toLowerCase()
-      );
-      
-      // Check whitelist by email (use async version for Redis support)
-      let isWhitelisted = isAdmin; // Admins are always whitelisted
-      
-      if (!isWhitelisted && accountEmail) {
-        isWhitelisted = await db.whitelist.isWhitelistedAsync(accountEmail);
-      }
-      
-      // Also check sender email
-      if (!isWhitelisted && senderEmail && senderEmail !== accountEmail) {
-        isWhitelisted = await db.whitelist.isWhitelistedAsync(senderEmail);
-      }
-      
-      console.log(`🔍 Whitelist check for ${accountLogin} (${accountEmail}): ${isWhitelisted ? '✅ APPROVED' : '❌ DENIED'}${isAdmin ? ' (ADMIN)' : ''}`);
-
-      if (!isWhitelisted) {
-        console.warn(`🚫 Access denied for ${accountLogin} - not whitelisted`);
-
-        const octokit = await getInstallationOctokit(
-          installation.installationId
-        );
-
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:4002";
-
-        await octokit.rest.issues.createComment({
-          owner,
-          repo,
-          issue_number: pull_number,
-          body:
-            "🔒 **Beta Access Required**\n\n" +
-            `NirikshanAI is currently in private beta. Only approved users can get AI code reviews.\n\n` +
-            `**Request Access:**\n` +
-            `👉 ${baseUrl}\n\n` +
-            `Once approved, your PRs will be automatically reviewed!`,
-        });
-
-        return NextResponse.json({ ok: true });
-      }
+      console.log(`✅ Whitelist check SKIPPED (disabled for testing) - Processing PR for ${accountLogin}`);
 
       if (!installation.openaiKey) {
         console.error("❌ OPENAI KEY NOT CONFIGURED");
