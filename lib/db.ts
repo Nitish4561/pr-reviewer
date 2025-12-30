@@ -189,15 +189,18 @@ export const db: Database = {
 
       installationStore.set(installationId, installation);
       
-      // Also save to KV if available
-      if (useKV) {
+      // Also save to Redis if available
+      if (useKV && process.env.REDIS_URL) {
         try {
-          const { kv } = await import("@vercel/kv");
-          await kv.set(`installation:${installationId}`, installation);
-          await kv.sadd("installations:all", installationId);
-          console.log(`✅ Installation saved to KV: ${installationId}`);
+          const { createClient } = await import("redis");
+          const redis = createClient({ url: process.env.REDIS_URL });
+          await redis.connect();
+          await redis.set(`installation:${installationId}`, JSON.stringify(installation));
+          await redis.sAdd("installations:all", installationId.toString());
+          await redis.quit();
+          console.log(`✅ Installation saved to Redis: ${installationId}`);
         } catch (err) {
-          console.error("Failed to save to KV:", err);
+          console.error("Failed to save to Redis:", err);
         }
       }
     },
@@ -212,16 +215,19 @@ export const db: Database = {
     },
 
     async findUnique({ where }) {
-      // Try KV first if available
-      if (useKV) {
+      // Try Redis first if available
+      if (useKV && process.env.REDIS_URL) {
         try {
-          const { kv } = await import("@vercel/kv");
-          const installation = await kv.get(`installation:${where.installationId}`);
-          if (installation) {
-            return installation as Installation;
+          const { createClient } = await import("redis");
+          const redis = createClient({ url: process.env.REDIS_URL });
+          await redis.connect();
+          const data = await redis.get(`installation:${where.installationId}`);
+          await redis.quit();
+          if (data) {
+            return JSON.parse(data) as Installation;
           }
         } catch (err) {
-          console.error("Failed to read from KV:", err);
+          console.error("Failed to read from Redis:", err);
         }
       }
       
@@ -251,23 +257,27 @@ export const db: Database = {
     },
 
     async getAll() {
-      // Try KV first if available
-      if (useKV) {
+      // Try Redis first if available
+      if (useKV && process.env.REDIS_URL) {
         try {
-          const { kv } = await import("@vercel/kv");
-          const allIds = await kv.smembers("installations:all") as number[];
+          const { createClient } = await import("redis");
+          const redis = createClient({ url: process.env.REDIS_URL });
+          await redis.connect();
+          const allIds = await redis.sMembers("installations:all");
           const installations: Installation[] = [];
           
           for (const id of allIds) {
-            const inst = await kv.get(`installation:${id}`);
-            if (inst) installations.push(inst as Installation);
+            const data = await redis.get(`installation:${id}`);
+            if (data) installations.push(JSON.parse(data) as Installation);
           }
+          
+          await redis.quit();
           
           if (installations.length > 0) {
             return installations;
           }
         } catch (err) {
-          console.error("Failed to read from KV:", err);
+          console.error("Failed to read from Redis:", err);
         }
       }
       

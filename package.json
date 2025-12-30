@@ -16,6 +16,7 @@
     "openai": "^6.15.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "redis": "^5.10.0",
     "resend": "^6.6.0"
   },
   "devDependencies": {

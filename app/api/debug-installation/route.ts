@@ -1,8 +1,27 @@
 import { NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
+import { createClient } from "redis";
 
 export async function GET() {
+  const redisUrl = process.env.REDIS_URL;
+  
+  if (!redisUrl) {
+    return NextResponse.json({
+      error: "REDIS_URL not configured",
+      envVars: {
+        KV_URL: !!process.env.KV_URL,
+        KV_REST_API_URL: !!process.env.KV_REST_API_URL,
+        KV_REST_API_TOKEN: !!process.env.KV_REST_API_TOKEN,
+        REDIS_URL: !!process.env.REDIS_URL,
+      },
+    });
+  }
+
+  let redis;
+  
   try {
+    redis = createClient({ url: redisUrl });
+    await redis.connect();
+
     const results = {
       envVars: {
         KV_URL: !!process.env.KV_URL,
@@ -17,15 +36,15 @@ export async function GET() {
 
     // Try to test Redis connection
     try {
-      await kv.set("test", "hello");
-      results.test = await kv.get("test");
+      await redis.set("test", "hello");
+      results.test = await redis.get("test");
     } catch (err: any) {
       results.error = err.message;
     }
 
     // Try to read installations
     try {
-      const allIds = await kv.smembers("installations:all");
+      const allIds = await redis.sMembers("installations:all");
       results.installations = {
         count: allIds.length,
         ids: allIds,
@@ -33,16 +52,20 @@ export async function GET() {
 
       // Try to get details of first installation
       if (allIds.length > 0) {
-        const firstId = Array.from(allIds)[0];
-        const details = await kv.get(`installation:${firstId}`);
-        results.installations.firstInstallation = details;
+        const firstId = allIds[0];
+        const details = await redis.get(`installation:${firstId}`);
+        results.installations.firstInstallation = details ? JSON.parse(details) : null;
       }
     } catch (err: any) {
       results.installations = { error: err.message };
     }
 
+    await redis.quit();
     return NextResponse.json(results);
   } catch (error: any) {
+    if (redis) {
+      try { await redis.quit(); } catch {}
+    }
     return NextResponse.json({
       error: error.message,
       stack: error.stack,
@@ -54,7 +77,20 @@ export async function GET() {
  * POST - Manually save installation for testing
  */
 export async function POST(req: Request) {
+  const redisUrl = process.env.REDIS_URL;
+  
+  if (!redisUrl) {
+    return NextResponse.json({
+      error: "REDIS_URL not configured",
+    }, { status: 500 });
+  }
+
+  let redis;
+  
   try {
+    redis = createClient({ url: redisUrl });
+    await redis.connect();
+
     const { installationId, accountLogin, repoIds } = await req.json();
 
     const installation = {
@@ -65,8 +101,10 @@ export async function POST(req: Request) {
       updatedAt: new Date().toISOString(),
     };
 
-    await kv.set(`installation:${installationId}`, installation);
-    await kv.sadd("installations:all", installationId);
+    await redis.set(`installation:${installationId}`, JSON.stringify(installation));
+    await redis.sAdd("installations:all", installationId.toString());
+
+    await redis.quit();
 
     return NextResponse.json({
       success: true,
@@ -74,6 +112,9 @@ export async function POST(req: Request) {
       installation,
     });
   } catch (error: any) {
+    if (redis) {
+      try { await redis.quit(); } catch {}
+    }
     return NextResponse.json({
       error: error.message,
     }, { status: 500 });
