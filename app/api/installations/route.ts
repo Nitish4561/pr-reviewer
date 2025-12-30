@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
 export async function GET() {
-  const installations = db.installation.getAll();
+  const installations = await db.installation.getAll();
 
   // Find the most recent installation with repositories
   const activeInstallation = installations

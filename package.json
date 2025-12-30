@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@octokit/rest": "^22.0.1",
+    "@vercel/kv": "^3.0.0",
     "jsonwebtoken": "^9.0.3",
     "next": "^16.1.1",
     "openai": "^6.15.0",

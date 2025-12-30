@@ -85,7 +85,7 @@ interface InstallationOperations {
     };
   }): Promise<Installation>;
 
-  getAll(): Installation[];
+  getAll(): Promise<Installation[]>;
 }
 
 /**
@@ -149,6 +149,9 @@ function isAdmin(email: string): boolean {
   return ADMIN_EMAILS.includes(email);
 }
 
+// Check if using Vercel KV
+const useKV = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+
 export const db: Database = {
   user: {
     async upsert({ where, update, create }) {
@@ -177,12 +180,26 @@ export const db: Database = {
       // Check if installation already exists to preserve OpenAI key
       const existing = installationStore.get(installationId);
 
-      installationStore.set(installationId, {
+      const installation = {
         installationId,
         accountLogin,
         repoIds,
         openaiKey: openaiKey || existing?.openaiKey, // Preserve existing key if not provided
-      });
+      };
+
+      installationStore.set(installationId, installation);
+      
+      // Also save to KV if available
+      if (useKV) {
+        try {
+          const { kv } = await import("@vercel/kv");
+          await kv.set(`installation:${installationId}`, installation);
+          await kv.sadd("installations:all", installationId);
+          console.log(`✅ Installation saved to KV: ${installationId}`);
+        } catch (err) {
+          console.error("Failed to save to KV:", err);
+        }
+      }
     },
 
     async findByRepoId(repoId: number) {
@@ -195,6 +212,20 @@ export const db: Database = {
     },
 
     async findUnique({ where }) {
+      // Try KV first if available
+      if (useKV) {
+        try {
+          const { kv } = await import("@vercel/kv");
+          const installation = await kv.get(`installation:${where.installationId}`);
+          if (installation) {
+            return installation as Installation;
+          }
+        } catch (err) {
+          console.error("Failed to read from KV:", err);
+        }
+      }
+      
+      // Fallback to in-memory
       const installation = installationStore.get(where.installationId);
       return installation || null;
     },
@@ -219,7 +250,28 @@ export const db: Database = {
       return newInstallation;
     },
 
-    getAll() {
+    async getAll() {
+      // Try KV first if available
+      if (useKV) {
+        try {
+          const { kv } = await import("@vercel/kv");
+          const allIds = await kv.smembers("installations:all") as number[];
+          const installations: Installation[] = [];
+          
+          for (const id of allIds) {
+            const inst = await kv.get(`installation:${id}`);
+            if (inst) installations.push(inst as Installation);
+          }
+          
+          if (installations.length > 0) {
+            return installations;
+          }
+        } catch (err) {
+          console.error("Failed to read from KV:", err);
+        }
+      }
+      
+      // Fallback to in-memory
       return Array.from(installationStore.values());
     },
   },
