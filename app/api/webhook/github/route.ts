@@ -52,10 +52,16 @@ export async function POST(req: Request) {
      * ======================================================
      */
     if (event === "installation" && payload.action === "created") {
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.log("📦 INSTALLATION WEBHOOK RECEIVED");
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      
       const installationId = payload.installation.id;
       const accountLogin = payload.installation.account.login;
 
-      console.log(`📦 Processing installation webhook for ${accountLogin} (ID: ${installationId})`);
+      console.log(`📦 Installation Details:`);
+      console.log(`   Account: ${accountLogin}`);
+      console.log(`   Installation ID: ${installationId}`);
 
       const repositories =
         payload.repositories?.map((repo: any) => ({
@@ -64,8 +70,10 @@ export async function POST(req: Request) {
           fullName: repo.full_name,
         })) ?? [];
 
-      console.log(`📦 Repositories:`, repositories.map((r: any) => r.fullName));
+      console.log(`📦 Repositories (${repositories.length}):`);
+      repositories.forEach((r: any) => console.log(`   - ${r.fullName} (ID: ${r.id})`));
 
+      console.log(`💾 Saving installation to database...`);
       await db.installation.saveInstallation({
         installationId,
         accountLogin,
@@ -73,6 +81,7 @@ export async function POST(req: Request) {
       });
 
       console.log(`✅ Installation saved successfully for ${accountLogin}`);
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
       return NextResponse.json({ ok: true });
     }
@@ -83,9 +92,15 @@ export async function POST(req: Request) {
      * ======================================================
      */
     if (event === "pull_request") {
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.log("🔔 PR WEBHOOK RECEIVED");
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      
       const action = payload.action;
+      console.log(`📌 Action: ${action}`);
 
       if (action !== "opened" && action !== "synchronize") {
+        console.log(`⏭️ Skipping action: ${action} (only process 'opened' or 'synchronize')`);
         return NextResponse.json({ ok: true });
       }
 
@@ -94,14 +109,29 @@ export async function POST(req: Request) {
       const pull_number = payload.pull_request.number;
       const installationId = payload.installation.id;
 
+      console.log(`📦 PR Details:`);
+      console.log(`   Owner: ${owner}`);
+      console.log(`   Repo: ${repo}`);
+      console.log(`   PR #: ${pull_number}`);
+      console.log(`   Installation ID: ${installationId}`);
+
       // 🔍 Find installation by ID (from webhook payload)
+      console.log(`🔍 Looking for installation ID: ${installationId}...`);
       const installation = await db.installation.findUnique({
         where: { installationId },
       });
 
       if (!installation) {
-        console.error("❌ No installation found for ID:", installationId);
+        console.error("❌ NO INSTALLATION FOUND FOR ID:", installationId);
+        console.error("   This means the installation webhook wasn't processed or data was lost");
         return NextResponse.json({ ok: true });
+      }
+      
+      console.log(`✅ Installation found: ${installation.accountLogin}`);
+      console.log(`   Repos: ${installation.repoIds.length}`);
+      console.log(`   Has OpenAI Key: ${!!installation.openaiKey}`);
+      if (installation.openaiKey) {
+        console.log(`   OpenAI Key: ${installation.openaiKey.substring(0, 20)}...`);
       }
 
       // 🔒 Check if user is whitelisted (WHITELIST ENFORCEMENT)
@@ -154,7 +184,8 @@ export async function POST(req: Request) {
       }
 
       if (!installation.openaiKey) {
-        console.warn("⚠️ OpenAI key not configured");
+        console.error("❌ OPENAI KEY NOT CONFIGURED");
+        console.error("   Go to /settings and add your OpenAI API key");
 
         const octokit = await getInstallationOctokit(
           installation.installationId
@@ -172,14 +203,23 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true });
       }
 
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.log("🚀 STARTING AI PR REVIEW");
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
       // 🔐 GitHub client
+      console.log("🔐 Creating GitHub client...");
       const octokit = await getInstallationOctokit(
         installation.installationId
       );
+      console.log("✅ GitHub client created");
 
       // 🤖 Run PR Review using our reviewer system
+      console.log("🤖 Importing reviewer module...");
       const { runPRReview } = await import("@/reviewer/index.js");
+      console.log("✅ Reviewer module loaded");
 
+      console.log("🔄 Running PR review...");
       await runPRReview({
         octokit,
         owner,
@@ -187,6 +227,10 @@ export async function POST(req: Request) {
         pull_number,
         openaiApiKey: installation.openaiKey,
       });
+
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.log("✅ PR REVIEW COMPLETED SUCCESSFULLY");
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
       return NextResponse.json({ ok: true });
     }
