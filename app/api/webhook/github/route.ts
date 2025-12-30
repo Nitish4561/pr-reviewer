@@ -107,14 +107,27 @@ export async function POST(req: Request) {
       // 🔒 Check if user is whitelisted (WHITELIST ENFORCEMENT)
       const accountLogin = installation.accountLogin;
       const accountEmail = payload.repository?.owner?.email || payload.sender?.email;
+      const senderEmail = payload.sender?.email;
       
-      // Check whitelist by email or username (use async version for Redis support)
-      let isWhitelisted = false;
-      if (accountEmail) {
+      // Admin emails - auto-whitelist
+      const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").filter(Boolean);
+      const isAdmin = accountEmail && adminEmails.some(admin => 
+        admin.toLowerCase() === accountEmail.toLowerCase()
+      );
+      
+      // Check whitelist by email (use async version for Redis support)
+      let isWhitelisted = isAdmin; // Admins are always whitelisted
+      
+      if (!isWhitelisted && accountEmail) {
         isWhitelisted = await db.whitelist.isWhitelistedAsync(accountEmail);
       }
       
-      console.log(`🔍 Whitelist check for ${accountLogin} (${accountEmail}): ${isWhitelisted ? '✅ APPROVED' : '❌ DENIED'}`);
+      // Also check sender email
+      if (!isWhitelisted && senderEmail && senderEmail !== accountEmail) {
+        isWhitelisted = await db.whitelist.isWhitelistedAsync(senderEmail);
+      }
+      
+      console.log(`🔍 Whitelist check for ${accountLogin} (${accountEmail}): ${isWhitelisted ? '✅ APPROVED' : '❌ DENIED'}${isAdmin ? ' (ADMIN)' : ''}`);
 
       if (!isWhitelisted) {
         console.warn(`🚫 Access denied for ${accountLogin} - not whitelisted`);
