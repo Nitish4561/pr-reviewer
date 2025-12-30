@@ -149,8 +149,8 @@ function isAdmin(email: string): boolean {
   return ADMIN_EMAILS.includes(email);
 }
 
-// Check if using Vercel KV
-const useKV = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+// Check if using Vercel KV/Redis
+const useKV = !!(process.env.KV_REST_API_URL || process.env.REDIS_URL || process.env.KV_URL);
 
 export const db: Database = {
   user: {
