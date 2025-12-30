@@ -85,7 +85,7 @@ export default function DashboardPage() {
           Danger Zone
         </h3>
         <p className="mt-2 text-sm text-red-600">
-          Uninstalling the app will stop all AI reviews and remove your data.
+          Uninstalling the app will stop all reviews and remove your data.
         </p>
 
         <a
