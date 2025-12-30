@@ -124,6 +124,8 @@ interface WhitelistOperations {
   
   isWhitelisted(email: string): boolean;
   
+  isWhitelistedAsync(email: string): Promise<boolean>;
+  
   findAll(): WhitelistedUser[];
 }
 
@@ -358,15 +360,71 @@ export const db: Database = {
       };
 
       whitelistStore.set(email.toLowerCase(), user);
+      
+      // Also save to Redis if available
+      if (useKV && process.env.REDIS_URL) {
+        try {
+          const { createClient } = await import("redis");
+          const redis = createClient({ url: process.env.REDIS_URL });
+          await redis.connect();
+          await redis.sAdd("whitelist:emails", email.toLowerCase());
+          await redis.set(`whitelist:${email.toLowerCase()}`, JSON.stringify(user));
+          await redis.quit();
+          console.log(`✅ Whitelisted user saved to Redis: ${email}`);
+        } catch (err) {
+          console.error("Failed to save whitelist to Redis:", err);
+        }
+      }
+      
       return user;
     },
 
     async remove(email: string) {
       whitelistStore.delete(email.toLowerCase());
+      
+      // Also remove from Redis
+      if (useKV && process.env.REDIS_URL) {
+        try {
+          const { createClient } = await import("redis");
+          const redis = createClient({ url: process.env.REDIS_URL });
+          await redis.connect();
+          await redis.sRem("whitelist:emails", email.toLowerCase());
+          await redis.del(`whitelist:${email.toLowerCase()}`);
+          await redis.quit();
+        } catch (err) {
+          console.error("Failed to remove from Redis:", err);
+        }
+      }
     },
 
     isWhitelisted(email: string) {
+      if (!email) return false;
       return whitelistStore.has(email.toLowerCase()) || isAdmin(email.toLowerCase());
+    },
+    
+    async isWhitelistedAsync(email: string) {
+      if (!email) return false;
+      
+      // Check in-memory first
+      if (whitelistStore.has(email.toLowerCase()) || isAdmin(email.toLowerCase())) {
+        return true;
+      }
+      
+      // Check Redis if available
+      if (useKV && process.env.REDIS_URL) {
+        try {
+          const { createClient } = await import("redis");
+          const redis = createClient({ url: process.env.REDIS_URL });
+          await redis.connect();
+          const isMember = await redis.sIsMember("whitelist:emails", email.toLowerCase());
+          await redis.quit();
+          return !!isMember; // Convert to boolean
+        } catch (err) {
+          console.error("Failed to check Redis whitelist:", err);
+        }
+      }
+      
+      return false;
     },
 
     findAll() {

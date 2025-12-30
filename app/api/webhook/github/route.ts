@@ -108,10 +108,10 @@ export async function POST(req: Request) {
       const accountLogin = installation.accountLogin;
       const accountEmail = payload.repository?.owner?.email || payload.sender?.email;
       
-      // Check whitelist by email or username
+      // Check whitelist by email or username (use async version for Redis support)
       let isWhitelisted = false;
       if (accountEmail) {
-        isWhitelisted = db.whitelist.isWhitelisted(accountEmail);
+        isWhitelisted = await db.whitelist.isWhitelistedAsync(accountEmail);
       }
       
       console.log(`🔍 Whitelist check for ${accountLogin} (${accountEmail}): ${isWhitelisted ? '✅ APPROVED' : '❌ DENIED'}`);
