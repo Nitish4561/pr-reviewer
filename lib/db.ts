@@ -239,23 +239,55 @@ export const db: Database = {
     },
 
     async upsert({ where, update, create }) {
-      const existing = installationStore.get(where.installationId);
-
-      if (existing) {
-        const updated = { ...existing, ...update };
-        installationStore.set(where.installationId, updated);
-        return updated;
+      // Try to get from Redis first
+      let existing = installationStore.get(where.installationId);
+      
+      if (useKV && process.env.REDIS_URL && !existing) {
+        try {
+          const { createClient } = await import("redis");
+          const redis = createClient({ url: process.env.REDIS_URL });
+          await redis.connect();
+          const data = await redis.get(`installation:${where.installationId}`);
+          await redis.quit();
+          if (data) {
+            existing = JSON.parse(data) as Installation;
+          }
+        } catch (err) {
+          console.error("Failed to read from Redis in upsert:", err);
+        }
       }
 
-      const newInstallation: Installation = {
-        installationId: create.installationId,
-        accountLogin: "",
-        repoIds: [],
-        openaiKey: create.openaiKey,
-      };
+      let result: Installation;
 
-      installationStore.set(create.installationId, newInstallation);
-      return newInstallation;
+      if (existing) {
+        result = { ...existing, ...update };
+        installationStore.set(where.installationId, result);
+      } else {
+        result = {
+          installationId: create.installationId,
+          accountLogin: "",
+          repoIds: [],
+          openaiKey: create.openaiKey,
+        };
+        installationStore.set(create.installationId, result);
+      }
+
+      // Save to Redis
+      if (useKV && process.env.REDIS_URL) {
+        try {
+          const { createClient } = await import("redis");
+          const redis = createClient({ url: process.env.REDIS_URL });
+          await redis.connect();
+          await redis.set(`installation:${where.installationId}`, JSON.stringify(result));
+          await redis.sAdd("installations:all", where.installationId.toString());
+          await redis.quit();
+          console.log(`✅ Installation upserted to Redis: ${where.installationId}`);
+        } catch (err) {
+          console.error("Failed to save upsert to Redis:", err);
+        }
+      }
+
+      return result;
     },
 
     async getAll() {
