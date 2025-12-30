@@ -28,6 +28,15 @@ OPENAI_API_KEY=sk-proj-your-openai-key-here
 
 # Admin Emails (comma-separated, for access control)
 ADMIN_EMAILS=your-email@example.com,another-admin@example.com
+
+# Resend API Key (for sending approval emails)
+RESEND_API_KEY=re_your_resend_api_key_here
+
+# Email From Address (must be verified in Resend)
+EMAIL_FROM=NirikshanAI <noreply@yourdomain.com>
+
+# Base URL (for email links)
+NEXT_PUBLIC_BASE_URL=http://localhost:4002
 ```
 
 ## Where to find these values:
