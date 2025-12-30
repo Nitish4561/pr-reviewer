@@ -49,6 +49,8 @@ export async function POST(req: Request) {
       const installationId = payload.installation.id;
       const accountLogin = payload.installation.account.login;
 
+      console.log(`📦 Processing installation webhook for ${accountLogin} (ID: ${installationId})`);
+
       const repositories =
         payload.repositories?.map((repo: any) => ({
           id: repo.id,
@@ -56,11 +58,15 @@ export async function POST(req: Request) {
           fullName: repo.full_name,
         })) ?? [];
 
+      console.log(`📦 Repositories:`, repositories.map((r: any) => r.fullName));
+
       await db.installation.saveInstallation({
         installationId,
         accountLogin,
         repositories,
       });
+
+      console.log(`✅ Installation saved successfully for ${accountLogin}`);
 
       return NextResponse.json({ ok: true });
     }
