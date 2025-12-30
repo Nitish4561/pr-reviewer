@@ -36,6 +36,7 @@ export async function GET(req: Request) {
   // Step 3: save user (DB later)
   // user.id, user.login, access_token
 
-  return NextResponse.redirect("http://localhost:4002/settings");
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:4002";
+  return NextResponse.redirect(`${baseUrl}/settings`);
 }
 
