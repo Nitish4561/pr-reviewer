@@ -104,12 +104,14 @@ export async function applyLabels({
   repo,
   pull_number,
   hasHighSeverity,
+  hasIssues,
 }) {
   console.log(`🏷️  Applying labels to PR #${pull_number}`);
   console.log(`   Has high severity: ${hasHighSeverity}`);
+  console.log(`   Has issues: ${hasIssues}`);
   
   // Remove old AI labels first to avoid stale labels
-  const aiLabels = ["ai-critical", "ai-reviewed"];
+  const aiLabels = ["ai-critical", "ai-reviewed", "ai-approved"];
   
   try {
     // Get current labels
@@ -141,17 +143,25 @@ export async function applyLabels({
     console.warn("⚠️ Could not remove old labels:", err.message);
   }
 
-  // Add the new label
-  const labels = hasHighSeverity
-    ? ["ai-critical"]
-    : ["ai-reviewed"];
+  // Determine which labels to add
+  let labels;
+  if (!hasIssues) {
+    // No issues found - PR is approved!
+    labels = ["ai-reviewed", "ai-approved"];
+  } else if (hasHighSeverity) {
+    // Has critical issues
+    labels = ["ai-critical"];
+  } else {
+    // Has minor issues
+    labels = ["ai-reviewed"];
+  }
 
-  console.log(`   Adding label: ${labels[0]}`);
+  console.log(`   Adding labels: ${labels.join(', ')}`);
   await octokit.issues.addLabels({
     owner,
     repo,
     issue_number: pull_number,
     labels,
   });
-  console.log(`   ✅ Label applied: ${labels[0]}`);
+  console.log(`   ✅ Labels applied: ${labels.join(', ')}`);
 }

@@ -38,65 +38,65 @@ export async function runPRReview({
   const commit_id = pr.head.sha;
 
   console.log(`📂 Files changed: ${files.length}`);
-  
-  if (!files.length) {
-    console.log(`⚠️ No files to review - skipping`);
-    return;
-  }
 
   // 2️⃣ Review files individually
-  console.log(`🤖 Starting AI review of ${files.length} files...`);
   const summaryIssues = [];
   let hasHighSeverity = false;
 
-  for (const file of files) {
-    if (!file.patch) {
-      console.log(`   ⏭️  Skipping ${file.filename} (no patch - binary/deleted)`);
-      continue; // binary / deleted
-    }
-
-    console.log(`   🔎 Reviewing: ${file.filename}`);
-    const review = await runReview(file.patch, key); // pass OpenAI key
-
-    if (!review?.issues?.length) {
-      console.log(`   ✅ No issues found in ${file.filename}`);
-      continue;
-    }
+  if (files.length > 0) {
+    console.log(`🤖 Starting AI review of ${files.length} files...`);
     
-    console.log(`   ⚠️  Found ${review.issues.length} issues in ${file.filename}`);
-
-    for (const issue of review.issues) {
-      if (!issue.line) {
-        console.warn(`   ⚠️ Skipping issue without line number`);
-        continue;
+    for (const file of files) {
+      if (!file.patch) {
+        console.log(`   ⏭️  Skipping ${file.filename} (no patch - binary/deleted)`);
+        continue; // binary / deleted
       }
 
-      if (issue.severity === "high") hasHighSeverity = true;
+      console.log(`   🔎 Reviewing: ${file.filename}`);
+      const review = await runReview(file.patch, key); // pass OpenAI key
 
-      // Post inline comment
-      await createReviewComment({
-        octokit,
-        owner,
-        repo,
-        pull_number,
-        commit_id,
-        path: file.filename,
-        line: issue.line,
-        body: `**🔴 ${issue.severity.toUpperCase()}**
+      if (!review?.issues?.length) {
+        console.log(`   ✅ No issues found in ${file.filename}`);
+        continue;
+      }
+      
+      console.log(`   ⚠️  Found ${review.issues.length} issues in ${file.filename}`);
+
+      for (const issue of review.issues) {
+        if (!issue.line) {
+          console.warn(`   ⚠️ Skipping issue without line number`);
+          continue;
+        }
+
+        if (issue.severity === "high") hasHighSeverity = true;
+
+        // Post inline comment
+        await createReviewComment({
+          octokit,
+          owner,
+          repo,
+          pull_number,
+          commit_id,
+          path: file.filename,
+          line: issue.line,
+          body: `**🔴 ${issue.severity.toUpperCase()}**
 
 ${issue.description}
 
 **💡 Suggestion:**
 ${issue.suggestion}`,
-      });
+        });
 
-      summaryIssues.push({
-        file: file.filename,
-        line: issue.line,
-        title: issue.description,
-        severity: issue.severity || "medium",
-      });
+        summaryIssues.push({
+          file: file.filename,
+          line: issue.line,
+          title: issue.description,
+          severity: issue.severity || "medium",
+        });
+      }
     }
+  } else {
+    console.log(`⚠️ No files changed in this PR update - will post clean review summary`);
   }
 
   // 3️⃣ Final PR summary
@@ -149,7 +149,8 @@ ${issue.suggestion}`,
 
   // 4️⃣ Apply labels
   try {
-    await applyLabels({ octokit, owner, repo, pull_number, hasHighSeverity });
+    const hasIssues = summaryIssues.length > 0;
+    await applyLabels({ octokit, owner, repo, pull_number, hasHighSeverity, hasIssues });
   } catch (err) {
     console.error("❌ Failed to apply labels:", err.message);
     throw err;
