@@ -32,26 +32,38 @@ export async function runPRReview({
   if (!key) throw new Error("Missing OpenAI API key");
 
   // 1️⃣ Fetch PR + files
+  console.log(`🔍 Fetching PR #${pull_number} details...`);
   const pr = await getPullRequest({ octokit, owner, repo, pull_number });
   const files = await getPullRequestFiles({ octokit, owner, repo, pull_number });
   const commit_id = pr.head.sha;
 
+  console.log(`📂 Files changed: ${files.length}`);
+  
   if (!files.length) {
+    console.log(`⚠️ No files to review - skipping`);
     return;
   }
 
   // 2️⃣ Review files individually
+  console.log(`🤖 Starting AI review of ${files.length} files...`);
   const summaryIssues = [];
   let hasHighSeverity = false;
 
   for (const file of files) {
-    if (!file.patch) continue; // binary / deleted
+    if (!file.patch) {
+      console.log(`   ⏭️  Skipping ${file.filename} (no patch - binary/deleted)`);
+      continue; // binary / deleted
+    }
 
+    console.log(`   🔎 Reviewing: ${file.filename}`);
     const review = await runReview(file.patch, key); // pass OpenAI key
 
     if (!review?.issues?.length) {
+      console.log(`   ✅ No issues found in ${file.filename}`);
       continue;
     }
+    
+    console.log(`   ⚠️  Found ${review.issues.length} issues in ${file.filename}`);
 
     for (const issue of review.issues) {
       if (!issue.line) {
@@ -122,14 +134,24 @@ ${issue.suggestion}`,
     summaryBody += `⚙️ Reviewed automatically by **NirikshanAI**`;
   }
 
-  await createReviewSummary({
-    octokit,
-    owner,
-    repo,
-    pull_number,
-    body: summaryBody,
-  });
+  try {
+    await createReviewSummary({
+      octokit,
+      owner,
+      repo,
+      pull_number,
+      body: summaryBody,
+    });
+  } catch (err) {
+    console.error("❌ Failed to post review summary:", err.message);
+    throw err;
+  }
 
   // 4️⃣ Apply labels
-  await applyLabels({ octokit, owner, repo, pull_number, hasHighSeverity });
+  try {
+    await applyLabels({ octokit, owner, repo, pull_number, hasHighSeverity });
+  } catch (err) {
+    console.error("❌ Failed to apply labels:", err.message);
+    throw err;
+  }
 }
