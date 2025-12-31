@@ -90,9 +90,12 @@ ${issue.suggestion}`,
   // 3️⃣ Final PR summary
   let summaryBody;
   if (summaryIssues.length === 0) {
-    summaryBody = `🤖 **AI PR Review**
+    summaryBody = `## 🤖 AI PR Review Summary
 
-✅ No issues found across changed files.`;
+✅ **All Clear!** No issues found across changed files.
+
+---
+⚙️ Reviewed automatically by **NirikshanAI**`;
   } else {
     summaryBody = `## 🤖 AI PR Review Summary\n\n`;
     const grouped = {};
