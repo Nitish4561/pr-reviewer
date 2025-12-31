@@ -107,7 +107,7 @@ ${issue.suggestion}`,
   let summaryBody;
   if (summaryIssues.length === 0) {
     console.log(`   ✅ No issues found - posting positive summary`);
-    summaryBody = `## 🤖 AI PR Review Summary
+    summaryBody = `## 🤖 NirikshanAI PR Review Summary
 
 ✅ **All Clear!** No issues found across changed files.
 
@@ -115,7 +115,7 @@ ${issue.suggestion}`,
 ⚙️ Reviewed automatically by **NirikshanAI**`;
   } else {
     console.log(`   ⚠️ Issues found - posting detailed summary`);
-    summaryBody = `## 🤖 AI PR Review Summary\n\n`;
+    summaryBody = `## 🤖 NirikshanAI PR Review Summary\n\n`;
     const grouped = {};
     for (const issue of summaryIssues) {
       grouped[issue.file] = grouped[issue.file] || [];
@@ -155,4 +155,11 @@ ${issue.suggestion}`,
     console.error("❌ Failed to apply labels:", err.message);
     throw err;
   }
+
+  // 5️⃣ Return review results for database storage
+  return {
+    issuesFound: summaryIssues.length,
+    hasHighSeverity,
+    prTitle: pr.title || "Untitled PR",
+  };
 }

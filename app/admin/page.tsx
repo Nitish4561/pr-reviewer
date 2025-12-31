@@ -133,15 +133,23 @@ export default function AdminPage() {
     <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Access Control Dashboard</h1>
+          <h1 className="text-3xl font-bold">🛡️ Admin Dashboard</h1>
           <p className="text-gray-600 mt-1">Logged in as: {adminEmail}</p>
         </div>
-        <button
-          onClick={() => setIsAuthenticated(false)}
-          className="text-sm text-gray-600 hover:text-gray-900"
-        >
-          Logout
-        </button>
+        <div className="flex gap-4 items-center">
+          <a
+            href="/admin/users"
+            className="text-sm bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700"
+          >
+            👥 Manage Users
+          </a>
+          <a
+            href="/"
+            className="text-sm text-gray-600 hover:text-gray-900"
+          >
+            ← Home
+          </a>
+        </div>
       </div>
 
       {/* Stats */}
