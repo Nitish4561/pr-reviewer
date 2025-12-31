@@ -81,12 +81,17 @@ export async function createReviewSummary({
   pull_number,
   body,
 }) {
+  console.log(`💬 Posting review summary to PR #${pull_number}`);
+  console.log(`   Summary length: ${body.length} characters`);
+  
   await octokit.issues.createComment({
     owner,
     repo,
     issue_number: pull_number,
     body,
   });
+  
+  console.log(`   ✅ Summary posted successfully`);
 }
 
 /* ----------------------------------------
@@ -100,27 +105,36 @@ export async function applyLabels({
   pull_number,
   hasHighSeverity,
 }) {
+  console.log(`🏷️  Applying labels to PR #${pull_number}`);
+  console.log(`   Has high severity: ${hasHighSeverity}`);
+  
   // Remove old AI labels first to avoid stale labels
   const aiLabels = ["ai-critical", "ai-reviewed"];
   
   try {
     // Get current labels
+    console.log(`   Fetching current labels...`);
     const { data: issue } = await octokit.issues.get({
       owner,
       repo,
       issue_number: pull_number,
     });
     
+    const currentLabels = issue.labels.map(l => typeof l === 'string' ? l : l.name);
+    console.log(`   Current labels: ${currentLabels.join(', ') || 'none'}`);
+    
     // Remove any existing AI labels
     for (const label of issue.labels) {
       const labelName = typeof label === 'string' ? label : label.name;
       if (aiLabels.includes(labelName)) {
+        console.log(`   Removing label: ${labelName}`);
         await octokit.issues.removeLabel({
           owner,
           repo,
           issue_number: pull_number,
           name: labelName,
         });
+        console.log(`   ✅ Removed: ${labelName}`);
       }
     }
   } catch (err) {
@@ -132,10 +146,12 @@ export async function applyLabels({
     ? ["ai-critical"]
     : ["ai-reviewed"];
 
+  console.log(`   Adding label: ${labels[0]}`);
   await octokit.issues.addLabels({
     owner,
     repo,
     issue_number: pull_number,
     labels,
   });
+  console.log(`   ✅ Label applied: ${labels[0]}`);
 }

@@ -88,8 +88,13 @@ ${issue.suggestion}`,
   }
 
   // 3️⃣ Final PR summary
+  console.log(`📊 Creating review summary...`);
+  console.log(`   Total issues found: ${summaryIssues.length}`);
+  console.log(`   Has high severity: ${hasHighSeverity}`);
+  
   let summaryBody;
   if (summaryIssues.length === 0) {
+    console.log(`   ✅ No issues found - posting positive summary`);
     summaryBody = `## 🤖 AI PR Review Summary
 
 ✅ **All Clear!** No issues found across changed files.
@@ -97,6 +102,7 @@ ${issue.suggestion}`,
 ---
 ⚙️ Reviewed automatically by **NirikshanAI**`;
   } else {
+    console.log(`   ⚠️ Issues found - posting detailed summary`);
     summaryBody = `## 🤖 AI PR Review Summary\n\n`;
     const grouped = {};
     for (const issue of summaryIssues) {
