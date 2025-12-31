@@ -1,8 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+interface User {
+  id: string;
+  email: string;
+  githubUsername?: string;
+  role: "admin" | "user";
+  status: string;
+}
 
 export default function HomePage() {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -10,6 +20,25 @@ export default function HomePage() {
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  async function checkAuth() {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.authenticated) {
+          setCurrentUser(data.user);
+          setIsAuthenticated(true);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to check auth:", err);
+    }
+  }
 
   async function handleRequestAccess(e: React.FormEvent) {
     e.preventDefault();
@@ -45,6 +74,49 @@ export default function HomePage() {
   return (
     <main className="max-w-5xl mx-auto px-6 py-20 space-y-20">
 
+      {/* User Status Bar */}
+      {isAuthenticated && currentUser && (
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                {currentUser.email[0].toUpperCase()}
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">
+                  Welcome back, {currentUser.githubUsername || currentUser.email}!
+                </p>
+                <p className="text-sm text-gray-600">
+                  Role: <span className="font-medium">{currentUser.role === "admin" ? "👑 Admin" : "👤 User"}</span>
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {currentUser.role === "admin" && (
+                <a
+                  href="/admin"
+                  className="px-4 py-2 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700"
+                >
+                  Admin Dashboard
+                </a>
+              )}
+              <a
+                href="/dashboard"
+                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+              >
+                My Dashboard
+              </a>
+              <a
+                href="/api/auth/logout"
+                className="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50"
+              >
+                Logout
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero */}
       <section className="text-center space-y-6">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 text-sm font-medium">
@@ -59,20 +131,30 @@ export default function HomePage() {
           AI-powered Pull Request reviews that think like a senior engineer.
         </p>
 
-        {!showRequestForm ? (
+        {!isAuthenticated && !showRequestForm && (
           <>
-            <button
-              onClick={() => setShowRequestForm(true)}
-              className="inline-block rounded-lg bg-blue-600 px-6 py-3 text-white font-medium hover:bg-blue-700 transition-colors"
-            >
-              Request Beta Access
-            </button>
+            <div className="flex gap-4 justify-center">
+              <a
+                href="/api/auth/github"
+                className="inline-block rounded-lg bg-gray-900 px-6 py-3 text-white font-medium hover:bg-gray-800 transition-colors"
+              >
+                Sign in with GitHub
+              </a>
+              <button
+                onClick={() => setShowRequestForm(true)}
+                className="inline-block rounded-lg bg-blue-600 px-6 py-3 text-white font-medium hover:bg-blue-700 transition-colors"
+              >
+                Request Beta Access
+              </button>
+            </div>
 
             <p className="text-sm text-gray-500">
               Limited access during beta • Uses your own OpenAI key
             </p>
           </>
-        ) : (
+        )}
+        
+        {!isAuthenticated && showRequestForm && (
           <div className="max-w-md mx-auto bg-white rounded-lg border border-gray-200 p-6 text-left">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Request Access</h3>

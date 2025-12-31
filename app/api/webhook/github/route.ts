@@ -176,13 +176,35 @@ export async function POST(req: Request) {
       console.log("✅ Reviewer module loaded");
 
       console.log("🔄 Running PR review...");
-      await runPRReview({
+      const reviewResult = await runPRReview({
         octokit,
         owner,
         repo,
         pull_number,
         openaiApiKey: installation.openaiKey,
       });
+
+      // 📊 Save review to database
+      if (reviewResult) {
+        try {
+          const { prReviewDb } = await import("@/lib/db-enhanced");
+          await prReviewDb.create({
+            owner,
+            repo,
+            prNumber: pull_number,
+            prTitle: reviewResult.prTitle,
+            reviewedBy: installation.accountLogin,
+            issuesFound: reviewResult.issuesFound,
+            hasHighSeverity: reviewResult.hasHighSeverity,
+            summary: `${reviewResult.issuesFound} issues found${reviewResult.hasHighSeverity ? ' (critical)' : ''}`,
+            installationId,
+          });
+          console.log("💾 Review saved to database");
+        } catch (err: any) {
+          console.error("⚠️ Failed to save review to database:", err.message);
+          // Don't fail the whole process if DB save fails
+        }
+      }
 
       console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
       console.log("✅ PR REVIEW COMPLETED SUCCESSFULLY");
