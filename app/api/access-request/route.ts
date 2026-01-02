@@ -64,6 +64,14 @@ export async function POST(req: Request) {
 }
 
 /**
+ * Check if email is an admin
+ */
+function isAdmin(email: string): boolean {
+  const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase());
+  return adminEmails.includes(email.toLowerCase());
+}
+
+/**
  * GET - Get all access requests (admin only)
  */
 export async function GET(req: Request) {
@@ -71,14 +79,23 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const adminEmail = searchParams.get("adminEmail");
 
-    // TODO: Add proper admin authentication
-    // For now, just check if admin email is provided
+    // Verify admin email against ADMIN_EMAILS env var
     if (!adminEmail) {
       return NextResponse.json(
-        { error: "Unauthorized" },
+        { error: "Unauthorized - Email required" },
         { status: 401 }
       );
     }
+
+    if (!isAdmin(adminEmail)) {
+      console.warn(`⚠️ Unauthorized access attempt by: ${adminEmail}`);
+      return NextResponse.json(
+        { error: "Unauthorized - You are not an admin" },
+        { status: 403 }
+      );
+    }
+
+    console.log(`✅ Admin access granted to: ${adminEmail}`);
 
     const requests = db.accessRequest.findAll();
     const whitelist = db.whitelist.findAll();

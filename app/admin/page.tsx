@@ -48,7 +48,12 @@ export default function AdminPage() {
         setRequests(data.requests || []);
         setWhitelist(data.whitelist || []);
       } else {
+        // Show error and log out if unauthorized
         alert(data.error || "Failed to fetch data");
+        if (res.status === 403 || res.status === 401) {
+          setIsAuthenticated(false);
+          setAdminEmail("");
+        }
       }
     } catch (err) {
       console.error("Failed to fetch:", err);
@@ -137,12 +142,12 @@ export default function AdminPage() {
           <p className="text-gray-600 mt-1">Logged in as: {adminEmail}</p>
         </div>
         <div className="flex gap-4 items-center">
-          <a
-            href="/admin/users"
-            className="text-sm bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700"
+          <button
+            onClick={() => setIsAuthenticated(false)}
+            className="text-sm text-gray-600 hover:text-gray-900"
           >
-            👥 Manage Users
-          </a>
+            Logout
+          </button>
           <a
             href="/"
             className="text-sm text-gray-600 hover:text-gray-900"

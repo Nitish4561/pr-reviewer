@@ -3,6 +3,14 @@ import { db } from "@/lib/db";
 import { sendApprovalEmail } from "@/lib/email";
 
 /**
+ * Check if email is an admin
+ */
+function isAdmin(email: string): boolean {
+  const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase());
+  return adminEmails.includes(email.toLowerCase());
+}
+
+/**
  * PATCH - Approve or reject access request (admin only)
  */
 export async function PATCH(
@@ -29,8 +37,16 @@ export async function PATCH(
       );
     }
 
-    // TODO: Add proper admin authentication
-    // For now, we trust the reviewedBy email
+    // Verify reviewedBy is an admin
+    if (!isAdmin(reviewedBy)) {
+      console.warn(`⚠️ Unauthorized approval attempt by: ${reviewedBy}`);
+      return NextResponse.json(
+        { error: "Unauthorized - You are not an admin" },
+        { status: 403 }
+      );
+    }
+
+    console.log(`✅ Admin action by: ${reviewedBy}`);
 
     // Check if request exists
     const allRequests = db.accessRequest.findAll();
