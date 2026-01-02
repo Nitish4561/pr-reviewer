@@ -43,18 +43,18 @@ export const kvdb = {
       }
 
       try {
-        const installation = {
-          installationId,
-          accountLogin,
-          repoIds: repositories.map((r: any) => r.id),
-          openaiKey,
-          updatedAt: new Date().toISOString(),
-        };
+      const installation = {
+        installationId,
+        accountLogin,
+        repoIds: repositories.map((r: any) => r.id),
+        openaiKey,
+        updatedAt: new Date().toISOString(),
+      };
 
         const redis = await getRedisClient();
         await redis.set(`installation:${installationId}`, JSON.stringify(installation));
         await redis.sAdd("installations:all", installationId.toString());
-        
+      
         console.log(`✅ Installation saved to Redis: ${installationId} for ${accountLogin}`);
       } catch (err: any) {
         console.error("❌ Error saving installation:", err.message);
@@ -70,7 +70,7 @@ export const kvdb = {
         if (!data) return null;
         
         const installation = typeof data === 'string' ? JSON.parse(data) : data;
-        return installation as any;
+      return installation as any;
       } catch (err: any) {
         console.error("❌ Error finding installation:", err.message);
         return null;
@@ -83,18 +83,18 @@ export const kvdb = {
       try {
         const redis = await getRedisClient();
         const allInstallationIds = await redis.sMembers("installations:all");
-        
-        for (const id of allInstallationIds) {
+      
+      for (const id of allInstallationIds) {
           const data = await redis.get(`installation:${id}`);
           if (data) {
             const installation = typeof data === 'string' ? JSON.parse(data) : data;
-            if (installation?.repoIds?.includes(repoId)) {
-              return installation;
+        if (installation?.repoIds?.includes(repoId)) {
+          return installation;
             }
-          }
         }
-        
-        return null;
+      }
+      
+      return null;
       } catch (err: any) {
         console.error("❌ Error finding installation by repo:", err.message);
         return null;
@@ -108,24 +108,24 @@ export const kvdb = {
         const redis = await getRedisClient();
         const data = await redis.get(`installation:${where.installationId}`);
         const existing = data ? (typeof data === 'string' ? JSON.parse(data) : data) : null;
-        
-        if (existing) {
-          const updated = { ...existing, ...update };
+      
+      if (existing) {
+        const updated = { ...existing, ...update };
           await redis.set(`installation:${where.installationId}`, JSON.stringify(updated));
-          return updated;
-        }
-        
-        const newInstallation = {
-          installationId: create.installationId,
-          accountLogin: "",
-          repoIds: [],
-          openaiKey: create.openaiKey,
-        };
-        
+        return updated;
+      }
+      
+      const newInstallation = {
+        installationId: create.installationId,
+        accountLogin: "",
+        repoIds: [],
+        openaiKey: create.openaiKey,
+      };
+      
         await redis.set(`installation:${where.installationId}`, JSON.stringify(newInstallation));
         await redis.sAdd("installations:all", where.installationId.toString());
-        
-        return newInstallation;
+      
+      return newInstallation;
       } catch (err: any) {
         console.error("❌ Error in installation upsert:", err.message);
         return create;
@@ -151,7 +151,7 @@ export const kvdb = {
         return installations;
       } catch (err: any) {
         console.error("❌ Error getting all installations:", err.message);
-        return [];
+      return [];
       }
     },
 
@@ -240,7 +240,7 @@ export const kvdb = {
         );
       } catch (err: any) {
         console.error("❌ Error fetching requests:", err.message);
-        return [];
+      return [];
       }
     },
 
@@ -261,48 +261,48 @@ export const kvdb = {
         return request;
       } catch (err: any) {
         console.error("❌ Error finding request by email:", err.message);
-        return null;
+      return null;
       }
     },
 
     async updateStatus({ id, status, reviewedBy }: any) {
       try {
         console.log(`🔄 Updating access request ${id} to ${status}`);
-        
+      
         const redis = await getRedisClient();
         const data = await redis.get(`access_request:${id}`);
-        
+      
         if (!data) {
           console.error(`❌ Access request not found in Redis: ${id}`);
-          throw new Error("Access request not found");
-        }
+        throw new Error("Access request not found");
+      }
 
         const request = typeof data === 'string' ? JSON.parse(data) : data;
-        
-        const updated = {
-          ...request,
-          status,
-          reviewedAt: new Date().toISOString(),
-          reviewedBy,
-        };
+
+      const updated = {
+        ...request,
+        status,
+        reviewedAt: new Date().toISOString(),
+        reviewedBy,
+      };
 
         await redis.set(`access_request:${id}`, JSON.stringify(updated));
         console.log(`✅ Request ${id} updated to ${status}`);
 
-        // If approved, add to whitelist
-        if (status === "approved") {
+      // If approved, add to whitelist
+      if (status === "approved") {
           console.log(`➕ Adding ${request.email} to whitelist`);
           await redis.sAdd("whitelist:emails", request.email.toLowerCase());
           await redis.set(`whitelist:${request.email.toLowerCase()}`, JSON.stringify({
-            email: request.email.toLowerCase(),
-            githubUsername: request.githubUsername,
-            addedAt: new Date().toISOString(),
-            addedBy: reviewedBy,
+          email: request.email.toLowerCase(),
+          githubUsername: request.githubUsername,
+          addedAt: new Date().toISOString(),
+          addedBy: reviewedBy,
           }));
           console.log(`✅ ${request.email} added to whitelist`);
-        }
+      }
 
-        return updated;
+      return updated;
       } catch (err: any) {
         console.error("❌ Error in updateStatus:", err.message);
         throw err;
@@ -347,18 +347,18 @@ export const kvdb = {
       if (!isKVConfigured) return {} as any;
       
       try {
-        const user = {
-          email: email.toLowerCase(),
-          githubUsername,
-          addedAt: new Date().toISOString(),
-          addedBy,
-        };
+      const user = {
+        email: email.toLowerCase(),
+        githubUsername,
+        addedAt: new Date().toISOString(),
+        addedBy,
+      };
 
         const redis = await getRedisClient();
         await redis.sAdd("whitelist:emails", email.toLowerCase());
         await redis.set(`whitelist:${email.toLowerCase()}`, JSON.stringify(user));
-        
-        return user;
+      
+      return user;
       } catch (err: any) {
         console.error("❌ Error adding to whitelist:", err.message);
         return {} as any;
@@ -394,7 +394,7 @@ export const kvdb = {
         const redis = await getRedisClient();
         const isMember = await redis.sIsMember("whitelist:emails", email.toLowerCase());
         console.log(`   Result: ${isMember ? 'YES' : 'NO'}`);
-        return !!isMember;
+      return !!isMember;
       } catch (err: any) {
         console.error("❌ Error checking whitelist:", err.message);
         return false;
@@ -536,7 +536,7 @@ export const kvdb = {
           .slice(0, limit);
       } catch (err: any) {
         console.error("❌ Error fetching PR reviews:", err.message);
-        return [];
+      return [];
       }
     },
 

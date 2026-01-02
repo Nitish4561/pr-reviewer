@@ -351,6 +351,7 @@ export default function AdminUsersPage() {
         </button>
       </div>
       </div>
+      </div>
     </div>
   );
 }

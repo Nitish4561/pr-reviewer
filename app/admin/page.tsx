@@ -227,7 +227,7 @@ export default function AdminPage() {
         showCancel={modal.showCancel}
       />
       
-      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+    <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
       <div className="flex items-center justify-between">
         <div>
             <h1 className="text-3xl font-bold dark:text-white">🛡️ Admin Dashboard</h1>
@@ -369,7 +369,7 @@ export default function AdminPage() {
                             "Delete this request? The user can re-request after.",
                             "warning",
                             async () => {
-                              await handleUpdateStatus(req.id, "rejected");
+                            await handleUpdateStatus(req.id, "rejected");
                             },
                             true
                           );
