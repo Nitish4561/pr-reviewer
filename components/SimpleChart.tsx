@@ -1,7 +1,7 @@
 "use client";
 
 interface SimpleChartProps {
-  data: { label: string; value: number; color: string }[];
+  data: { label: string; value: number; color: string; className?: string }[];
 }
 
 export function SimpleBarChart({ data }: SimpleChartProps) {

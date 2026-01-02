@@ -51,7 +51,7 @@ export default function AdminPage() {
     setLoading(true);
     const success = await fetchData();
     if (success) {
-      setIsAuthenticated(true);
+    setIsAuthenticated(true);
     }
     setLoading(false);
   }
@@ -184,20 +184,20 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
-      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
+    <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+      <div className="flex items-center justify-between">
+        <div>
             <h1 className="text-3xl font-bold dark:text-white">🛡️ Admin Dashboard</h1>
             <p className="text-gray-600 dark:text-gray-300 mt-1">Logged in as: {adminEmail}</p>
-          </div>
+        </div>
           <div className="flex gap-4 items-center">
             <ThemeToggle />
-            <button
-              onClick={() => setIsAuthenticated(false)}
+        <button
+          onClick={() => setIsAuthenticated(false)}
               className="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
-            >
-              Logout
-            </button>
+        >
+          Logout
+        </button>
           <a
             href="/"
             className="text-sm text-gray-600 hover:text-gray-900"

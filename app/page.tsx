@@ -105,19 +105,19 @@ export default function HomePage() {
           <ErrorHandler setStatus={setStatus} />
         </Suspense>
 
-        {/* Hero */}
-        <section className="text-center space-y-6">
+      {/* Hero */}
+      <section className="text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-sm font-medium">
-            <span>🔒</span>
-            <span>Private Beta</span>
-          </div>
+          <span>🔒</span>
+          <span>Private Beta</span>
+        </div>
 
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight dark:text-white">
-            NirikshanAI
-          </h1>
+          NirikshanAI
+        </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300">
-            AI-powered Pull Request reviews that think like a senior engineer.
-          </p>
+          AI-powered Pull Request reviews that think like a senior engineer.
+        </p>
 
         {/* Show error/status messages */}
         {status && (
@@ -131,12 +131,12 @@ export default function HomePage() {
             <div className="flex flex-col gap-4 items-center">
               {/* Primary CTA */}
               <div className="flex gap-4">
-                <button
-                  onClick={() => setShowRequestForm(true)}
+            <button
+              onClick={() => setShowRequestForm(true)}
                   className="rounded-lg bg-blue-600 px-6 py-3 text-white font-medium hover:bg-blue-700 transition-colors"
-                >
-                  Request Beta Access
-                </button>
+            >
+              Request Beta Access
+            </button>
                 
                 <a
                   href="/api/auth/github"
