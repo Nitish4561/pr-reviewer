@@ -360,16 +360,16 @@ export default function DashboardPage() {
                 href={`https://github.com/apps/${process.env.NEXT_PUBLIC_GITHUB_APP_SLUG || "nirikshanai"}/installations/new`}
                 className="block w-full text-center rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
               >
-                Install on Repositories
+                Install NirikshanAI
               </a>
             ) : (
               <a
-                href="https://github.com/settings/installations"
+                href={`https://github.com/apps/${process.env.NEXT_PUBLIC_GITHUB_APP_SLUG || "nirikshanai"}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block w-full text-center rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
               >
-                Manage Installation
+                Uninstall NirikshanAI
               </a>
             )}
 
