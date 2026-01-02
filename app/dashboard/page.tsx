@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { SimpleBarChart, SimplePieChart } from "@/components/SimpleChart";
 import ThemeToggle from "@/components/ThemeToggle";
 import Modal from "@/components/Modal";
+import MermaidDiagram from "@/components/MermaidDiagram";
 
 interface PRReview {
   id: string;
@@ -241,12 +242,6 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          <a
-            href="/"
-            className="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
-          >
-            ← Home
-          </a>
         </div>
       </div>
 
@@ -628,6 +623,32 @@ export default function DashboardPage() {
           <li>Inline comments and labels are added to the PR</li>
           <li>Review history appears here on your dashboard</li>
         </ol>
+      </div>
+
+      {/* PR Review Flow Diagram */}
+      <div className="rounded-xl bg-white dark:bg-gray-800 border dark:border-gray-700 p-6">
+        <h3 className="text-xl font-semibold dark:text-white mb-4">🔄 PR Review Flow</h3>
+        <MermaidDiagram
+          chart={`
+sequenceDiagram
+    participant Dev as Developer
+    participant GH as GitHub
+    participant App as NirikshanAI
+    participant AI as OpenAI GPT-4
+
+    Dev->>GH: Create/Update Pull Request
+    GH->>App: Webhook: PR opened/updated
+    App->>GH: Fetch PR files & diffs
+    GH-->>App: PR content
+    App->>AI: Analyze code with context
+    AI-->>App: Review results & suggestions
+    App->>GH: Post inline comments
+    App->>GH: Apply labels (ai-reviewed, ai-approved, ai-critical)
+    App->>App: Save review to database
+    GH-->>Dev: Notifications & comments
+    Dev->>Dev: View review on GitHub PR
+          `}
+        />
       </div>
     </div>
     </div>

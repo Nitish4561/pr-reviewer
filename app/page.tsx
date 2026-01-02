@@ -323,17 +323,17 @@ export default function HomePage() {
           ["Connect", "Add your OpenAI API key"],
           ["Review", "Get line-by-line PR feedback automatically"],
         ].map(([title, desc]) => (
-          <div key={title} className="rounded-lg border p-6 text-center hover:shadow-md transition-shadow">
-            <h3 className="font-semibold text-lg">{title}</h3>
-            <p className="text-sm text-gray-600 mt-2">{desc}</p>
+          <div key={title} className="rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 p-6 text-center hover:shadow-md transition-shadow">
+            <h3 className="font-semibold text-lg dark:text-white">{title}</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{desc}</p>
           </div>
         ))}
       </section>
 
       {/* Why */}
       <section className="space-y-6">
-        <h2 className="text-2xl font-semibold">Why NirikshanAI?</h2>
-        <ul className="list-disc list-inside text-gray-700 space-y-2">
+        <h2 className="text-2xl font-semibold dark:text-white">Why NirikshanAI?</h2>
+        <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
           <li>Line-wise comments directly on GitHub PRs</li>
           <li>Multiple comments per file</li>
           <li>No hallucinations — only real diffs</li>
@@ -342,9 +342,9 @@ export default function HomePage() {
       </section>
 
       {/* Security */}
-      <section className="rounded-lg bg-gray-50 border p-8 space-y-4">
-        <h2 className="text-xl font-semibold">Security & Trust</h2>
-        <ul className="text-sm text-gray-700 space-y-2">
+      <section className="rounded-lg bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 p-8 space-y-4">
+        <h2 className="text-xl font-semibold dark:text-white">Security & Trust</h2>
+        <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
           <li>🔒 Your API key is encrypted</li>
           <li>📄 Only PR diffs are analyzed</li>
           <li>🧹 No long-term code storage</li>
