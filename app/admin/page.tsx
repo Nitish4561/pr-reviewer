@@ -96,6 +96,33 @@ export default function AdminPage() {
     }
   }
 
+  async function handleRevokeAccess(email: string) {
+    if (!confirm(`⚠️ Revoke access for ${email}?\n\nThis will remove them from the whitelist and they won't be able to sign in.`)) return;
+
+    try {
+      const res = await fetch("/api/admin/revoke-access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          revokedBy: adminEmail,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(`✅ Access revoked for ${email}`);
+        await fetchData(); // Refresh the list
+      } else {
+        alert("❌ " + (data.error || "Failed to revoke access"));
+      }
+    } catch (err) {
+      console.error("Failed to revoke:", err);
+      alert("❌ Failed to revoke access. Please try again.");
+    }
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -283,6 +310,50 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {/* Whitelisted Users Section */}
+      {whitelist.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">✅ Whitelisted Users</h2>
+          <div className="space-y-3">
+            {whitelist.map((user) => (
+              <div
+                key={user.email}
+                className="bg-white rounded-lg border p-6 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-semibold text-lg">{user.email}</h3>
+                      <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                        Active
+                      </span>
+                    </div>
+                    {user.githubUsername && (
+                      <p className="text-gray-600 text-sm mt-1">
+                        GitHub: @{user.githubUsername}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-400 mt-2">
+                      Added: {new Date(user.addedAt).toLocaleString()}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Added by: {user.addedBy}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => handleRevokeAccess(user.email)}
+                    className="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700"
+                  >
+                    Revoke Access
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Refresh Button */}
       <div className="text-center">
