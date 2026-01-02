@@ -34,12 +34,14 @@ export default function AdminPage() {
     if (!adminEmail) return;
 
     setLoading(true);
-    await fetchData();
-    setIsAuthenticated(true);
+    const success = await fetchData();
+    if (success) {
+      setIsAuthenticated(true);
+    }
     setLoading(false);
   }
 
-  async function fetchData() {
+  async function fetchData(): Promise<boolean> {
     try {
       const res = await fetch(`/api/access-request?adminEmail=${encodeURIComponent(adminEmail)}`);
       const data = await res.json();
@@ -47,17 +49,17 @@ export default function AdminPage() {
       if (res.ok) {
         setRequests(data.requests || []);
         setWhitelist(data.whitelist || []);
+        return true; // Success
       } else {
-        // Show error and log out if unauthorized
+        // Show error and prevent login
         alert(data.error || "Failed to fetch data");
-        if (res.status === 403 || res.status === 401) {
-          setIsAuthenticated(false);
-          setAdminEmail("");
-        }
+        setIsAuthenticated(false);
+        return false; // Failed
       }
     } catch (err) {
       console.error("Failed to fetch:", err);
       alert("Failed to fetch access requests");
+      return false; // Failed
     }
   }
 
