@@ -7,14 +7,14 @@ export async function POST(req: Request) {
     // Use new RBAC auth system
     const user = await requireAuth();
 
-    const { openaiKey } = await req.json();
+  const { openaiKey } = await req.json();
 
-    if (!openaiKey || !openaiKey.startsWith("sk-")) {
-      return NextResponse.json(
-        { error: "Invalid OpenAI key" },
-        { status: 400 }
-      );
-    }
+  if (!openaiKey || !openaiKey.startsWith("sk-")) {
+    return NextResponse.json(
+      { error: "Invalid OpenAI key" },
+      { status: 400 }
+    );
+  }
 
     // Save OpenAI key to user profile
     await userDb.update(user.id, { openaiKey });

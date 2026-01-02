@@ -8,7 +8,7 @@ interface AccessRequest {
   email: string;
   githubUsername?: string;
   message?: string;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "revoked";
   requestedAt: string;
   reviewedAt?: string;
   reviewedBy?: string;
@@ -27,7 +27,7 @@ export default function AdminPage() {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [whitelist, setWhitelist] = useState<WhitelistedUser[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
+  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected" | "revoked">("pending");
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -162,6 +162,7 @@ export default function AdminPage() {
 
   const pendingCount = requests.filter((r) => r.status === "pending").length;
   const approvedCount = requests.filter((r) => r.status === "approved").length;
+  const revokedCount = requests.filter((r) => r.status === "revoked").length;
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
@@ -204,7 +205,7 @@ export default function AdminPage() {
 
       {/* Filter Tabs */}
       <div className="flex gap-2 border-b">
-        {(["all", "pending", "approved", "rejected"] as const).map((f) => (
+        {(["all", "pending", "approved", "revoked", "rejected"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -218,6 +219,11 @@ export default function AdminPage() {
             {f === "pending" && pendingCount > 0 && (
               <span className="ml-2 bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full text-xs">
                 {pendingCount}
+              </span>
+            )}
+            {f === "revoked" && revokedCount > 0 && (
+              <span className="ml-2 bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs">
+                {revokedCount}
               </span>
             )}
           </button>
@@ -249,6 +255,8 @@ export default function AdminPage() {
                             ? "bg-yellow-100 text-yellow-700"
                             : req.status === "approved"
                             ? "bg-green-100 text-green-700"
+                            : req.status === "revoked"
+                            ? "bg-orange-100 text-orange-700"
                             : "bg-red-100 text-red-700"
                         }`}
                       >

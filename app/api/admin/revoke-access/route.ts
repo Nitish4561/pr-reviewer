@@ -37,10 +37,24 @@ export async function POST(req: Request) {
 
     console.log(`🔐 Admin ${revokedBy} revoking access for: ${email}`);
 
-    // Remove from whitelist
+    // Step 1: Remove from whitelist
     await kvdb.whitelist.remove(email);
+    console.log(`   ✅ Removed from whitelist`);
 
-    console.log(`✅ Access revoked for ${email}`);
+    // Step 2: Find and update their access request to "revoked"
+    const accessRequest = await kvdb.accessRequest.findByEmail(email);
+    if (accessRequest) {
+      await kvdb.accessRequest.updateStatus({
+        id: accessRequest.id,
+        status: "revoked",
+        reviewedBy: revokedBy,
+      });
+      console.log(`   ✅ Access request marked as revoked`);
+    } else {
+      console.log(`   ℹ️ No access request found for this email`);
+    }
+
+    console.log(`✅ Access fully revoked for ${email}`);
 
     return NextResponse.json({
       success: true,

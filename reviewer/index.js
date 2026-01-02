@@ -45,55 +45,55 @@ export async function runPRReview({
 
   if (files.length > 0) {
     console.log(`🤖 Starting AI review of ${files.length} files...`);
-    
-    for (const file of files) {
+
+  for (const file of files) {
       if (!file.patch) {
         console.log(`   ⏭️  Skipping ${file.filename} (no patch - binary/deleted)`);
         continue; // binary / deleted
       }
 
       console.log(`   🔎 Reviewing: ${file.filename}`);
-      const review = await runReview(file.patch, key); // pass OpenAI key
+    const review = await runReview(file.patch, key); // pass OpenAI key
 
-      if (!review?.issues?.length) {
+    if (!review?.issues?.length) {
         console.log(`   ✅ No issues found in ${file.filename}`);
-        continue;
-      }
+      continue;
+    }
       
       console.log(`   ⚠️  Found ${review.issues.length} issues in ${file.filename}`);
 
-      for (const issue of review.issues) {
-        if (!issue.line) {
-          console.warn(`   ⚠️ Skipping issue without line number`);
-          continue;
-        }
+    for (const issue of review.issues) {
+      if (!issue.line) {
+        console.warn(`   ⚠️ Skipping issue without line number`);
+        continue;
+      }
 
-        if (issue.severity === "high") hasHighSeverity = true;
+      if (issue.severity === "high") hasHighSeverity = true;
 
-        // Post inline comment
-        await createReviewComment({
-          octokit,
-          owner,
-          repo,
-          pull_number,
-          commit_id,
-          path: file.filename,
-          line: issue.line,
-          body: `**🔴 ${issue.severity.toUpperCase()}**
+      // Post inline comment
+      await createReviewComment({
+        octokit,
+        owner,
+        repo,
+        pull_number,
+        commit_id,
+        path: file.filename,
+        line: issue.line,
+        body: `**🔴 ${issue.severity.toUpperCase()}**
 
 ${issue.description}
 
 **💡 Suggestion:**
 ${issue.suggestion}`,
-        });
+      });
 
-        summaryIssues.push({
-          file: file.filename,
-          line: issue.line,
-          title: issue.description,
-          severity: issue.severity || "medium",
-        });
-      }
+      summaryIssues.push({
+        file: file.filename,
+        line: issue.line,
+        title: issue.description,
+        severity: issue.severity || "medium",
+      });
+    }
     }
   } else {
     console.log(`⚠️ No files changed in this PR update - will post clean review summary`);
@@ -135,13 +135,13 @@ ${issue.suggestion}`,
   }
 
   try {
-    await createReviewSummary({
-      octokit,
-      owner,
-      repo,
-      pull_number,
-      body: summaryBody,
-    });
+  await createReviewSummary({
+    octokit,
+    owner,
+    repo,
+    pull_number,
+    body: summaryBody,
+  });
   } catch (err) {
     console.error("❌ Failed to post review summary:", err.message);
     throw err;
