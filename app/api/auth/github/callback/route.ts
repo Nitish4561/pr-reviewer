@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleGitHubLogin, createSession } from "@/lib/auth-middleware";
-import { db } from "@/lib/db";
+import { kvdb } from "@/lib/db-kv";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -50,8 +50,10 @@ export async function GET(req: Request) {
 
     const userEmail = githubUser.email || `${githubUser.login}@github.user`;
 
-    // Step 3: Check if user is approved
-    const isApproved = await db.whitelist.isWhitelistedAsync(userEmail);
+    // Step 3: Check if user is approved (using Redis/KV)
+    console.log(`🔍 Checking if user is whitelisted: ${userEmail}`);
+    const isApproved = await kvdb.whitelist.isWhitelistedAsync(userEmail);
+    console.log(`   Approved: ${isApproved}`);
 
     if (!isApproved) {
       console.warn(`⚠️ Unapproved user tried to login: ${userEmail}`);
@@ -60,21 +62,29 @@ export async function GET(req: Request) {
     }
 
     // Step 4: Create or update user and create session
+    console.log(`👤 Creating/updating user: ${userEmail}`);
     const user = await handleGitHubLogin({
       id: githubUser.id.toString(),
       login: githubUser.login,
       email: userEmail,
     });
 
+    console.log(`🍪 Creating session for user: ${user.email}`);
     await createSession(user);
 
-    console.log(`✅ User logged in: ${user.email} (${user.role})`);
+    console.log(`✅ User logged in successfully: ${user.email} (${user.role})`);
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:4002";
     
     // After successful OAuth, redirect to dashboard
-    console.log(`🔗 Redirecting user to dashboard`);
-    return NextResponse.redirect(`${baseUrl}/dashboard`);
+    console.log(`🔗 Redirecting user to dashboard: ${baseUrl}/dashboard`);
+    
+    const response = NextResponse.redirect(`${baseUrl}/dashboard`);
+    
+    // Ensure the session cookie is included in the redirect response
+    console.log(`📦 Session cookie should be set in response`);
+    
+    return response;
     
   } catch (err: any) {
     console.error("GitHub OAuth error:", err);

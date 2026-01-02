@@ -22,14 +22,20 @@ export function middleware(request: NextRequest) {
     pathname.startsWith(route)
   );
 
+  console.log(`🔒 Middleware check for: ${pathname}`);
+  console.log(`   Protected route: ${isProtectedRoute}`);
+  console.log(`   Has session cookie: ${!!sessionCookie}`);
+
   // Only block dashboard/settings if no OAuth session
   // /admin has its own email-based auth system
   if (!sessionCookie && isProtectedRoute) {
+    console.log(`⚠️ No session found, redirecting to home with unauthorized error`);
     const url = new URL("/", request.url);
     url.searchParams.set("error", "unauthorized");
     return NextResponse.redirect(url);
   }
 
+  console.log(`✅ Access granted to: ${pathname}`);
   return NextResponse.next();
 }
 

@@ -59,25 +59,36 @@ export async function getCurrentUser(): Promise<User | null> {
  * Create a new session for a user
  */
 export async function createSession(user: User): Promise<void> {
-  const cookieStore = await cookies();
+  try {
+    const cookieStore = await cookies();
 
-  const sessionData: SessionData = {
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-    githubUsername: user.githubUsername,
-  };
+    const sessionData: SessionData = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      githubUsername: user.githubUsername,
+    };
 
-  cookieStore.set("nirikshan_session", JSON.stringify(sessionData), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 30, // 30 days
-    path: "/",
-  });
+    console.log(`🍪 Setting session cookie for user: ${user.email}`);
+    
+    cookieStore.set("nirikshan_session", JSON.stringify(sessionData), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: "/",
+    });
 
-  // Update last login
-  await userDb.updateLastLogin(user.id);
+    console.log(`✅ Session cookie set successfully`);
+
+    // Update last login (non-blocking, don't await to avoid delays)
+    userDb.updateLastLogin(user.id).catch((err) => {
+      console.error("Failed to update last login:", err);
+    });
+  } catch (error) {
+    console.error("❌ Error creating session:", error);
+    throw error;
+  }
 }
 
 /**
