@@ -4,11 +4,12 @@ import type { NextRequest } from "next/server";
 /**
  * Next.js Middleware for Route Protection
  * Runs on edge before page renders
+ * 
+ * NOTE: /admin has its own email-based auth, so we don't block it here
  */
 
-// Define protected routes
+// Define protected routes (only dashboard and settings need OAuth)
 const protectedRoutes = ["/dashboard", "/settings"];
-const adminRoutes = ["/admin"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -20,38 +21,21 @@ export function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   );
-  const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route));
 
-  // If no session and trying to access protected route
-  if (!sessionCookie && (isProtectedRoute || isAdminRoute)) {
+  // Only block dashboard/settings if no OAuth session
+  // /admin has its own email-based auth system
+  if (!sessionCookie && isProtectedRoute) {
     const url = new URL("/", request.url);
     url.searchParams.set("error", "unauthorized");
     return NextResponse.redirect(url);
-  }
-
-  // Check admin access
-  if (sessionCookie && isAdminRoute) {
-    try {
-      const session = JSON.parse(sessionCookie.value);
-
-      // Only admins can access admin routes
-      if (session.role !== "admin") {
-        const url = new URL("/dashboard", request.url);
-        return NextResponse.redirect(url);
-      }
-    } catch (err) {
-      // Invalid session cookie
-      const url = new URL("/", request.url);
-      url.searchParams.set("error", "invalid_session");
-      return NextResponse.redirect(url);
-    }
   }
 
   return NextResponse.next();
 }
 
 // Configure which routes to run middleware on
+// NOTE: Removed /admin from matcher - it has its own auth
 export const config = {
-  matcher: ["/dashboard/:path*", "/settings/:path*", "/admin/:path*"],
+  matcher: ["/dashboard/:path*", "/settings/:path*"],
 };
 
