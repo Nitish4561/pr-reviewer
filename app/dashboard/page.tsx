@@ -363,6 +363,11 @@ export default function DashboardPage() {
               ? "NirikshanAI is installed on your repositories."
               : "Install NirikshanAI on your repositories to enable PR reviews."}
           </p>
+          
+          {/* Debug Info */}
+          <div className="mt-2 text-xs text-gray-400">
+            Debug: isInstalled = {String(isInstalled)}
+          </div>
 
           <div className="mt-4 space-y-3">
             {!isInstalled ? (

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { db } from "@/lib/db";
+import { kvdb } from "@/lib/db-kv";
 import { getInstallationOctokit } from "@/lib/github";
 
 /**
@@ -74,13 +74,39 @@ export async function POST(req: Request) {
       repositories.forEach((r: any) => console.log(`   - ${r.fullName} (ID: ${r.id})`));
 
       console.log(`💾 Saving installation to database...`);
-      await db.installation.saveInstallation({
+      await kvdb.installation.saveInstallation({
         installationId,
         accountLogin,
         repositories,
       });
 
       console.log(`✅ Installation saved successfully for ${accountLogin}`);
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+      return NextResponse.json({ ok: true });
+    }
+
+    /**
+     * ======================================================
+     * 1️⃣b GitHub App Uninstallation
+     * ======================================================
+     */
+    if (event === "installation" && payload.action === "deleted") {
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.log("🗑️  INSTALLATION DELETED WEBHOOK RECEIVED");
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      
+      const installationId = payload.installation.id;
+      const accountLogin = payload.installation.account.login;
+
+      console.log(`🗑️  Installation Details:`);
+      console.log(`   Account: ${accountLogin}`);
+      console.log(`   Installation ID: ${installationId}`);
+
+      console.log(`💾 Removing installation from database...`);
+      await kvdb.installation.delete(installationId);
+
+      console.log(`✅ Installation removed successfully for ${accountLogin}`);
       console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
       return NextResponse.json({ ok: true });
@@ -117,7 +143,7 @@ export async function POST(req: Request) {
 
       // 🔍 Find installation by ID (from webhook payload)
       console.log(`🔍 Looking for installation ID: ${installationId}...`);
-      const installation = await db.installation.findUnique({
+      const installation = await kvdb.installation.findUnique({
         where: { installationId },
       });
 

@@ -154,6 +154,26 @@ export const kvdb = {
         return [];
       }
     },
+
+    async delete(installationId: number | string) {
+      if (!isKVConfigured) return;
+      
+      try {
+        const redis = await getRedisClient();
+        
+        console.log(`🗑️  Deleting installation ${installationId} from Redis...`);
+        
+        // Delete the installation data
+        await redis.del(`installation:${installationId}`);
+        
+        // Remove from the set of all installations
+        await redis.sRem("installations:all", installationId.toString());
+        
+        console.log(`✅ Installation ${installationId} deleted from Redis`);
+      } catch (err: any) {
+        console.error("❌ Error deleting installation:", err.message);
+      }
+    },
   },
 
   accessRequest: {
