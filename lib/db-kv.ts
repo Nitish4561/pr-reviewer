@@ -106,14 +106,32 @@ export const kvdb = {
       return request;
     },
 
-    findAll() {
-      // Placeholder - implement if needed
-      return [];
+    async findAll() {
+      if (!isKVConfigured) return [];
+      
+      const requestIds = await kv.smembers("access_requests:all") as string[];
+      const requests = [];
+      
+      for (const id of requestIds) {
+        const request = await kv.get(`access_request:${id}`);
+        if (request) requests.push(request);
+      }
+      
+      // Sort by requested date (newest first)
+      return requests.sort((a: any, b: any) => 
+        new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()
+      );
     },
 
-    findByEmail(email: string) {
-      // Placeholder - implement if needed
-      return null;
+    async findByEmail(email: string) {
+      if (!isKVConfigured) return null;
+      
+      const requestId = await kv.get(`access_request_email:${email.toLowerCase()}`) as string | null;
+      
+      if (!requestId) return null;
+      
+      const request = await kv.get(`access_request:${requestId}`) as any;
+      return request || null;
     },
 
     async updateStatus({ id, status, reviewedBy }: any) {
@@ -186,8 +204,21 @@ export const kvdb = {
       return !!isMember;
     },
 
-    findAll() {
-      return [];
+    async findAll() {
+      if (!isKVConfigured) return [];
+      
+      const emails = await kv.smembers("whitelist:emails") as string[];
+      const users = [];
+      
+      for (const email of emails) {
+        const user = await kv.get(`whitelist:${email}`);
+        if (user) users.push(user);
+      }
+      
+      // Sort by added date (newest first)
+      return users.sort((a: any, b: any) => 
+        new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
+      );
     },
   },
 };

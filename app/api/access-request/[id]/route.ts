@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { kvdb } from "@/lib/db-kv";
 import { sendApprovalEmail } from "@/lib/email";
 
 /**
@@ -48,11 +48,8 @@ export async function PATCH(
 
     console.log(`✅ Admin action by: ${reviewedBy}`);
 
-    // Check if request exists
-    const allRequests = db.accessRequest.findAll();
-    console.log("All requests in DB:", allRequests.map(r => ({ id: r.id, email: r.email })));
-
-    const updated = await db.accessRequest.updateStatus({
+    // Update request status in KV database
+    const updated = await kvdb.accessRequest.updateStatus({
       id: requestId,
       status,
       reviewedBy,

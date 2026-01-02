@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { kvdb } from "@/lib/db-kv";
 
 /**
  * GET /api/check-approval?email=user@example.com
@@ -17,8 +17,8 @@ export async function GET(req: Request) {
       );
     }
 
-    // Check if user is whitelisted
-    const isApproved = await db.whitelist.isWhitelistedAsync(email);
+    // Check if user is whitelisted (using KV)
+    const isApproved = await kvdb.whitelist.isWhitelistedAsync(email);
 
     if (isApproved) {
       return NextResponse.json({
@@ -28,8 +28,8 @@ export async function GET(req: Request) {
       });
     }
 
-    // Check if there's a pending request
-    const request = db.accessRequest.findByEmail(email);
+    // Check if there's a pending request (using KV)
+    const request = await kvdb.accessRequest.findByEmail(email);
 
     if (request) {
       return NextResponse.json({

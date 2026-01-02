@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { kvdb } from "@/lib/db-kv";
 
 /**
  * POST - Request beta access
@@ -15,8 +15,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if already requested
-    const existing = db.accessRequest.findByEmail(email);
+    // Check if already requested (using KV)
+    const existing = await kvdb.accessRequest.findByEmail(email);
     if (existing) {
       if (existing.status === "approved") {
         return NextResponse.json(
@@ -25,24 +25,15 @@ export async function POST(req: Request) {
         );
       }
       if (existing.status === "pending") {
-        // Check if request is older than 5 minutes (likely stale after server restart)
-        const requestAge = Date.now() - new Date(existing.requestedAt).getTime();
-        const fiveMinutes = 5 * 60 * 1000;
-        
-        if (requestAge > fiveMinutes) {
-          console.log(`♻️ Allowing re-request for ${email} (old request was ${Math.round(requestAge / 1000)}s ago)`);
-          // Allow re-requesting - old one is likely stale
-        } else {
-          return NextResponse.json(
-            { error: "Your request is already pending review. Please wait for approval." },
-            { status: 400 }
-          );
-        }
+        return NextResponse.json(
+          { error: "Your request is already pending review. Please wait for approval." },
+          { status: 400 }
+        );
       }
     }
 
-    // Create access request
-    const request = await db.accessRequest.create({
+    // Create access request (saves to Redis via KV)
+    const request = await kvdb.accessRequest.create({
       name,
       email,
       githubUsername,
@@ -97,8 +88,11 @@ export async function GET(req: Request) {
 
     console.log(`✅ Admin access granted to: ${adminEmail}`);
 
-    const requests = db.accessRequest.findAll();
-    const whitelist = db.whitelist.findAll();
+    // Fetch from KV database (persisted in Redis)
+    const requests = await kvdb.accessRequest.findAll();
+    const whitelist = await kvdb.whitelist.findAll();
+
+    console.log(`📊 Found ${requests.length} requests and ${whitelist.length} whitelisted users`);
 
     return NextResponse.json({
       requests,
