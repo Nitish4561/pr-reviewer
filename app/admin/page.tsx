@@ -396,7 +396,7 @@ export default function AdminPage() {
       <div className="text-center">
         <button
           onClick={fetchData}
-          className="px-6 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm"
+          className="px-6 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm dark:text-white"
         >
           🔄 Refresh Data
         </button>
