@@ -510,17 +510,26 @@ export const kvdb = {
         const reviewIds = await redis.sMembers(`pr_reviews:user:${username}`) as string[];
         
         // Fetch all reviews
-        const reviews = [];
+        const reviewsMap = new Map(); // Use Map to deduplicate by PR
+        
         for (const id of reviewIds) {
           const data = await redis.get(`pr_review:${id}`);
           if (data) {
             const review = typeof data === 'string' ? JSON.parse(data) : data;
-            reviews.push(review);
+            const prKey = `${review.owner}/${review.repo}#${review.prNumber}`;
+            
+            // Keep only the latest review for each PR
+            const existing = reviewsMap.get(prKey);
+            if (!existing || new Date(review.reviewedAt) > new Date(existing.reviewedAt)) {
+              reviewsMap.set(prKey, review);
+            }
           }
         }
         
-        // Sort by date (newest first) and limit
-        return reviews
+        // Convert Map to array and sort by date (newest first)
+        const uniqueReviews = Array.from(reviewsMap.values());
+        
+        return uniqueReviews
           .sort((a: any, b: any) => 
             new Date(b.reviewedAt).getTime() - new Date(a.reviewedAt).getTime()
           )

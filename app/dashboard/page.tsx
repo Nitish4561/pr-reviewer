@@ -326,50 +326,92 @@ export default function DashboardPage() {
             No PR reviews yet. Reviews will appear here after NirikshanAI analyzes your pull requests.
           </div>
         ) : (
-          <div className="space-y-3">
-            {reviews.map((review) => (
-              <div
-                key={review.id}
-                className="bg-white rounded-lg border p-5 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-semibold">
-                        {review.owner}/{review.repo} #{review.prNumber}
-                      </h3>
+          <div className="bg-white rounded-lg border overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    PR Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Issues
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {reviews.map((review) => (
+                  <tr
+                    key={review.id}
+                    className={`hover:bg-gray-50 transition-colors ${
+                      review.issuesFound === 0 
+                        ? "bg-green-50" 
+                        : "bg-red-50"
+                    }`}
+                  >
+                    <td className="px-6 py-4">
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {review.owner}/{review.repo} #{review.prNumber}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          {review.prTitle}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                      {new Date(review.reviewedAt).toLocaleDateString()}
+                      <div className="text-xs text-gray-400">
+                        {new Date(review.reviewedAt).toLocaleTimeString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
                       {review.issuesFound === 0 ? (
-                        <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                           ✅ Clean
                         </span>
                       ) : review.hasHighSeverity ? (
-                        <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                           🔴 Critical
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
-                          ⚠️ {review.issuesFound} Issues
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          ⚠️ Has Issues
                         </span>
                       )}
-                    </div>
-                    <p className="text-gray-700 text-sm mt-1">
-                      {review.prTitle}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-2">
-                      Reviewed {new Date(review.reviewedAt).toLocaleString()}
-                    </p>
-                  </div>
-                  <a
-                    href={`https://github.com/${review.owner}/${review.repo}/pull/${review.prNumber}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:text-blue-700"
-                  >
-                    View PR →
-                  </a>
-                </div>
-              </div>
-            ))}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-gray-900">
+                        {review.issuesFound}
+                      </div>
+                      {review.hasHighSeverity && (
+                        <div className="text-xs text-red-600">
+                          Critical
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <a
+                        href={`https://github.com/${review.owner}/${review.repo}/pull/${review.prNumber}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                      >
+                        View PR →
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -415,22 +457,22 @@ export default function DashboardPage() {
         {/* Show input field (adding new or editing) */}
         {(!hasKey || isEditingKey) && (
           <div className="mt-4 space-y-3">
-            <input
-              type="password"
-              placeholder="sk-proj-..."
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
+        <input
+          type="password"
+          placeholder="sk-proj-..."
+          value={key}
+          onChange={(e) => setKey(e.target.value)}
               className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+        />
 
             <div className="flex gap-2">
-              <button
-                onClick={saveKey}
+        <button
+          onClick={saveKey}
                 disabled={!key}
                 className="px-4 py-2 rounded-md bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Save OpenAI Key
-              </button>
+        >
+          Save OpenAI Key
+        </button>
               {isEditingKey && (
                 <button
                   onClick={cancelEditingKey}
@@ -441,17 +483,17 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {saved && (
+        {saved && (
               <p className="text-sm text-green-600">
-                ✅ Key saved successfully
-              </p>
-            )}
-            {error && (
+            ✅ Key saved successfully
+          </p>
+        )}
+        {error && (
               <p className="text-sm text-red-600">
-                {error}
-              </p>
-            )}
-          </div>
+            {error}
+          </p>
+        )}
+      </div>
         )}
       </div>
 
@@ -490,8 +532,8 @@ export default function DashboardPage() {
 
             <a
               href="https://github.com/settings/installations"
-              target="_blank"
-              rel="noopener noreferrer"
+          target="_blank"
+          rel="noopener noreferrer"
               className="block w-full text-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
             >
               View All Installations
