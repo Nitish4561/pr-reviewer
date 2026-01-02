@@ -42,6 +42,7 @@ export async function runPRReview({
   // 2️⃣ Review files individually
   const summaryIssues = [];
   let hasHighSeverity = false;
+  let sequenceDiagram = null;
 
   if (files.length > 0) {
     console.log(`🤖 Starting AI review of ${files.length} files...`);
@@ -54,6 +55,12 @@ export async function runPRReview({
 
       console.log(`   🔎 Reviewing: ${file.filename}`);
     const review = await runReview(file.patch, key); // pass OpenAI key
+
+    // Capture sequence diagram from first file that provides one
+    if (review?.sequenceDiagram && !sequenceDiagram) {
+      sequenceDiagram = review.sequenceDiagram;
+      console.log(`   📊 Sequence diagram generated`);
+    }
 
     if (!review?.issues?.length) {
         console.log(`   ✅ No issues found in ${file.filename}`);
@@ -109,10 +116,14 @@ ${issue.suggestion}`,
     console.log(`   ✅ No issues found - posting positive summary`);
     summaryBody = `## 🤖 NirikshanAI PR Review Summary
 
-✅ **All Clear!** No issues found across changed files.
-
----
-⚙️ Reviewed automatically by **NirikshanAI**`;
+✅ **All Clear!** No issues found across changed files.`;
+    
+    // Add sequence diagram if available
+    if (sequenceDiagram) {
+      summaryBody += `\n\n## 🔄 System Flow\n\n\`\`\`mermaid\n${sequenceDiagram}\n\`\`\``;
+    }
+    
+    summaryBody += `\n\n---\n⚙️ Reviewed automatically by **NirikshanAI**`;
   } else {
     console.log(`   ⚠️ Issues found - posting detailed summary`);
     summaryBody = `## 🤖 NirikshanAI PR Review Summary\n\n`;
@@ -128,6 +139,11 @@ ${issue.suggestion}`,
         summaryBody += `- **${i.severity.toUpperCase()}** (Line ${i.line}) — ${i.title}\n`;
       });
       summaryBody += "\n";
+    }
+
+    // Add sequence diagram if available
+    if (sequenceDiagram) {
+      summaryBody += `## 🔄 System Flow\n\n\`\`\`mermaid\n${sequenceDiagram}\n\`\`\`\n\n`;
     }
 
     summaryBody += `---\n`;

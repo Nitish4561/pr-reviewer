@@ -17,7 +17,7 @@ export async function runReview(diff, openaiApiKey) {
   if (!key) throw new Error("OpenAI API key not provided to runReview");
 
   if (!diff || diff.length < 20) {
-    return { issues: [] };
+    return { issues: [], sequenceDiagram: null };
   }
 
   const prompt = buildReviewPrompt(diff);
@@ -33,7 +33,7 @@ export async function runReview(diff, openaiApiKey) {
       messages: [
         {
           role: "system",
-          content: "You are a code review AI. You ONLY output valid JSON. Never use markdown formatting or explanatory text. Your entire response must be parseable JSON with an 'issues' array where each issue has: severity, line (number), description, and suggestion fields."
+          content: "You are a code review AI. You ONLY output valid JSON. Never use markdown formatting or explanatory text. Your entire response must be parseable JSON with: 1) 'issues' array (each issue has: severity, line number, description, suggestion), and 2) 'sequenceDiagram' string (a Mermaid sequence diagram showing how this PR's changes affect system flow). Format the sequence diagram as a single line with \\n for newlines."
         },
         {
           role: "user",
@@ -49,7 +49,7 @@ export async function runReview(diff, openaiApiKey) {
   if (!response.ok) {
     const text = await response.text();
     console.error(`OpenAI API error: ${response.status} - ${text}`);
-    return { issues: [] };
+    return { issues: [], sequenceDiagram: null };
   }
 
   const data = await response.json();
@@ -71,7 +71,7 @@ export async function runReview(diff, openaiApiKey) {
     // Validate that we have issues array
     if (!review.issues || !Array.isArray(review.issues)) {
       console.warn("⚠️ AI response missing issues array");
-      return { issues: [] };
+      return { issues: [], sequenceDiagram: review.sequenceDiagram || null };
     }
 
     // Filter out issues without line numbers and log them
@@ -88,10 +88,13 @@ export async function runReview(diff, openaiApiKey) {
       return true;
     });
     
-    return { issues: validIssues };
+    return { 
+      issues: validIssues,
+      sequenceDiagram: review.sequenceDiagram || null
+    };
   } catch (err) {
     console.error("⚠️ Failed to parse AI response:", err.message);
     console.error("Response content:", data.choices[0]?.message?.content);
-    return { issues: [] };
+    return { issues: [], sequenceDiagram: null };
   }
 }

@@ -56,10 +56,19 @@ JSON FORMAT (required):
       "description": "Duplicate <div> block repeated 6 times",
       "suggestion": "Use Array.from({ length: 6 }, ...) to generate elements"
     }
-  ]
+  ],
+  "sequenceDiagram": "sequenceDiagram\\n    participant User\\n    participant API\\n    User->>API: Request\\n    API-->>User: Response"
 }
 
-If no issues found, return: {"issues": []}
+SEQUENCE DIAGRAM GENERATION:
+- Generate a Mermaid sequence diagram showing how the PR changes affect system flow
+- Show interactions between components/modules/services
+- Keep it concise (max 10 interactions)
+- Use participant names from the actual code
+- Show the flow of data/control
+- Format as a single-line string with \\n for newlines
+
+If no issues found, return: {"issues": [], "sequenceDiagram": "..."}
 
 DIFF:
 ${diff}

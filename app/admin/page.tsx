@@ -252,7 +252,7 @@ export default function AdminPage() {
 
       {/* Access Requests */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Access Requests</h2>
+        <h2 className="text-xl font-semibold dark:text-white">Access Requests</h2>
 
         {filteredRequests.length === 0 ? (
           <div className="bg-white rounded-lg border p-8 text-center text-gray-500">
@@ -351,7 +351,7 @@ export default function AdminPage() {
       {/* Whitelisted Users Section */}
       {whitelist.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">✅ Whitelisted Users</h2>
+          <h2 className="text-xl font-semibold dark:text-white">✅ Whitelisted Users</h2>
           <div className="space-y-3">
             {whitelist.map((user) => (
               <div
