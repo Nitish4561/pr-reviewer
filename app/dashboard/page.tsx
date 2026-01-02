@@ -31,10 +31,33 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCharts, setShowCharts] = useState(true);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [installationSuccess, setInstallationSuccess] = useState(false);
 
   useEffect(() => {
     fetchReviews();
+    checkInstallation();
+    
+    // Check if redirected from successful installation
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("installation") === "success") {
+      setInstallationSuccess(true);
+      // Remove the query param
+      window.history.replaceState({}, "", "/dashboard");
+    }
   }, []);
+
+  async function checkInstallation() {
+    try {
+      const res = await fetch("/api/installations");
+      if (res.ok) {
+        const data = await res.json();
+        setIsInstalled(!!data.installation);
+      }
+    } catch (err) {
+      console.error("Failed to check installation:", err);
+    }
+  }
 
   async function fetchReviews() {
     try {
@@ -93,7 +116,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Welcome Message for New Users */}
-      {!loading && stats?.totalReviews === 0 && (
+      {!loading && stats?.totalReviews === 0 && !installationSuccess && (
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 p-6">
           <div className="flex items-start gap-4">
             <div className="text-4xl">👋</div>
@@ -118,6 +141,32 @@ export default function DashboardPage() {
                   <span>Create or update a PR to see NirikshanAI review it automatically!</span>
                 </li>
               </ol>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Installation Success Message */}
+      {installationSuccess && (
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200 p-6">
+          <div className="flex items-start gap-4">
+            <div className="text-4xl">🎉</div>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-gray-900 mb-2">
+                GitHub App Installed Successfully!
+              </h2>
+              <p className="text-gray-700 mb-3">
+                Great! NirikshanAI is now installed on your repositories.
+              </p>
+              <p className="text-sm text-gray-600">
+                Next step: Add your OpenAI API key below to start reviewing PRs.
+              </p>
+              <button
+                onClick={() => setInstallationSuccess(false)}
+                className="mt-4 text-sm text-green-600 hover:text-green-700 font-medium"
+              >
+                Dismiss
+              </button>
             </div>
           </div>
         </div>
@@ -300,18 +349,29 @@ export default function DashboardPage() {
         <div className="rounded-xl border bg-white p-6">
           <h2 className="text-lg font-semibold">🔗 GitHub App</h2>
           <p className="mt-1 text-sm text-gray-600">
-            Install NirikshanAI on your repositories to enable PR reviews.
+            {isInstalled 
+              ? "NirikshanAI is installed on your repositories."
+              : "Install NirikshanAI on your repositories to enable PR reviews."}
           </p>
 
           <div className="mt-4 space-y-3">
-            <a
-              href={`https://github.com/apps/${process.env.NEXT_PUBLIC_GITHUB_APP_SLUG || "nirikshanai"}/installations/new`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full text-center rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
-            >
-              Install on Repositories
-            </a>
+            {!isInstalled ? (
+              <a
+                href={`https://github.com/apps/${process.env.NEXT_PUBLIC_GITHUB_APP_SLUG || "nirikshanai"}/installations/new`}
+                className="block w-full text-center rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
+              >
+                Install on Repositories
+              </a>
+            ) : (
+              <a
+                href="https://github.com/settings/installations"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full text-center rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
+              >
+                Manage Installation
+              </a>
+            )}
 
             <a
               href="https://github.com/settings/installations"
@@ -319,7 +379,7 @@ export default function DashboardPage() {
               rel="noopener noreferrer"
               className="block w-full text-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
             >
-              Manage Installations
+              View All Installations
             </a>
           </div>
 
