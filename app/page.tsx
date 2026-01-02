@@ -7,11 +7,14 @@ function ErrorHandler({ setStatus }: { setStatus: (status: string) => void }) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Check for error in URL params
+    // Check for messages in URL params
     const error = searchParams?.get("error");
     const emailParam = searchParams?.get("email");
+    const installation = searchParams?.get("installation");
     
-    if (error === "not_approved" && emailParam) {
+    if (installation === "success") {
+      setStatus("🎉 GitHub App installed successfully! Now sign in with GitHub to access your dashboard.");
+    } else if (error === "not_approved" && emailParam) {
       setStatus(`❌ Your access request (${emailParam}) is pending admin approval. Please wait for approval before signing in.`);
     } else if (error === "auth_failed") {
       setStatus("❌ GitHub authentication failed. Please try again.");

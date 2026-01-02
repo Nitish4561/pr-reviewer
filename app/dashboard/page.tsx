@@ -32,22 +32,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showCharts, setShowCharts] = useState(true);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [installationSuccess, setInstallationSuccess] = useState(false);
 
   useEffect(() => {
     fetchReviews();
     checkInstallation();
-    
-    // Check if redirected from successful installation
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("installation") === "success") {
-      setInstallationSuccess(true);
-      setIsInstalled(true); // Mark as installed
-      // Remove the query param
-      window.history.replaceState({}, "", "/dashboard");
-      // Recheck after a short delay to get actual data
-      setTimeout(() => checkInstallation(), 1000);
-    }
   }, []);
 
   async function checkInstallation() {
@@ -126,7 +114,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Welcome Message for New Users */}
-      {!loading && stats?.totalReviews === 0 && !installationSuccess && (
+      {!loading && stats?.totalReviews === 0 && (
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 p-6">
           <div className="flex items-start gap-4">
             <div className="text-4xl">👋</div>
@@ -151,32 +139,6 @@ export default function DashboardPage() {
                   <span>Create or update a PR to see NirikshanAI review it automatically!</span>
                 </li>
               </ol>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Installation Success Message */}
-      {installationSuccess && (
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200 p-6">
-          <div className="flex items-start gap-4">
-            <div className="text-4xl">🎉</div>
-            <div className="flex-1">
-              <h2 className="text-xl font-bold text-gray-900 mb-2">
-                GitHub App Installed Successfully!
-              </h2>
-              <p className="text-gray-700 mb-3">
-                Great! NirikshanAI is now installed on your repositories.
-              </p>
-              <p className="text-sm text-gray-600">
-                Next step: Add your OpenAI API key below to start reviewing PRs.
-              </p>
-              <button
-                onClick={() => setInstallationSuccess(false)}
-                className="mt-4 text-sm text-green-600 hover:text-green-700 font-medium"
-              >
-                Dismiss
-              </button>
             </div>
           </div>
         </div>
