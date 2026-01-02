@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
+import { createClient } from "redis";
 
 /**
- * Test KV connection and environment variables
+ * Test Redis connection using REDIS_URL
  */
 export async function GET() {
   const envVars = {
@@ -12,7 +12,7 @@ export async function GET() {
     KV_URL: !!process.env.KV_URL,
   };
 
-  console.log("🔍 Testing KV Connection...");
+  console.log("🔍 Testing Redis Connection...");
   console.log("Environment Variables:", envVars);
 
   const results: any = {
@@ -20,46 +20,69 @@ export async function GET() {
     tests: {},
   };
 
-  // Test 1: Write
+  let redis: any = null;
+
   try {
+    if (!process.env.REDIS_URL) {
+      throw new Error("REDIS_URL not configured");
+    }
+
+    // Connect to Redis
+    console.log("📡 Connecting to Redis...");
+    redis = createClient({ url: process.env.REDIS_URL });
+    await redis.connect();
+    console.log("✅ Connected to Redis");
+
+    // Test 1: Write
     const testKey = `test_${Date.now()}`;
-    const testValue = { hello: "world", timestamp: new Date().toISOString() };
+    const testValue = JSON.stringify({ hello: "world", timestamp: new Date().toISOString() });
     
     console.log(`📝 Test 1: Writing to key ${testKey}...`);
-    await kv.set(testKey, testValue);
+    await redis.set(testKey, testValue);
     results.tests.write = { success: true, key: testKey };
     console.log("✅ Write successful");
 
     // Test 2: Read
     console.log(`📖 Test 2: Reading from key ${testKey}...`);
-    const retrieved = await kv.get(testKey);
-    results.tests.read = { success: true, value: retrieved };
-    console.log("✅ Read successful:", retrieved);
+    const retrieved = await redis.get(testKey);
+    const parsed = JSON.parse(retrieved);
+    results.tests.read = { success: true, value: parsed };
+    console.log("✅ Read successful:", parsed);
 
     // Test 3: Delete
     console.log(`🗑️ Test 3: Deleting key ${testKey}...`);
-    await kv.del(testKey);
+    await redis.del(testKey);
     results.tests.delete = { success: true };
     console.log("✅ Delete successful");
 
     // Test 4: Set operations
     console.log(`📦 Test 4: Testing set operations...`);
-    await kv.sadd("test_set", "value1", "value2");
-    const members = await kv.smembers("test_set");
-    await kv.del("test_set");
+    await redis.sAdd("test_set", "value1", "value2");
+    const members = await redis.sMembers("test_set");
+    await redis.del("test_set");
     results.tests.set = { success: true, members };
     console.log("✅ Set operations successful:", members);
 
-    results.overall = "✅ All KV tests passed!";
+    results.overall = "✅ All Redis tests passed!";
     results.configured = true;
   } catch (err: any) {
-    console.error("❌ KV Test Failed:", err);
-    results.overall = `❌ KV test failed: ${err.message}`;
+    console.error("❌ Redis Test Failed:", err);
+    results.overall = `❌ Redis test failed: ${err.message}`;
     results.configured = false;
     results.error = {
       message: err.message,
-      stack: err.stack,
+      stack: err.stack?.split('\n').slice(0, 5).join('\n'), // Truncate stack
     };
+  } finally {
+    // Clean up connection
+    if (redis) {
+      try {
+        await redis.quit();
+        console.log("🔌 Redis connection closed");
+      } catch (err) {
+        console.error("Warning: Failed to close Redis connection");
+      }
+    }
   }
 
   return NextResponse.json(results, {
