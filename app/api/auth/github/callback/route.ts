@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleGitHubLogin, createSession } from "@/lib/auth-middleware";
+import { db } from "@/lib/db";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -47,11 +48,22 @@ export async function GET(req: Request) {
       githubUser.email = primaryEmail?.email;
     }
 
-    // Step 3: Create or update user and create session
+    const userEmail = githubUser.email || `${githubUser.login}@github.user`;
+
+    // Step 3: Check if user is approved
+    const isApproved = await db.whitelist.isWhitelistedAsync(userEmail);
+
+    if (!isApproved) {
+      console.warn(`⚠️ Unapproved user tried to login: ${userEmail}`);
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:4002";
+      return NextResponse.redirect(`${baseUrl}?error=not_approved&email=${encodeURIComponent(userEmail)}`);
+    }
+
+    // Step 4: Create or update user and create session
     const user = await handleGitHubLogin({
       id: githubUser.id.toString(),
       login: githubUser.login,
-      email: githubUser.email,
+      email: userEmail,
     });
 
     await createSession(user);
