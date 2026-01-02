@@ -3,10 +3,22 @@ import { kv } from "@vercel/kv";
 /**
  * Vercel KV (Redis) Database Layer
  * This replaces the in-memory database with persistent storage
+ * Supports both Vercel KV and direct Redis URL
  */
 
-// Check if KV is configured
-const isKVConfigured = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+// Check if KV is configured (either Vercel KV or Redis URL)
+const isKVConfigured = !!(
+  (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) || 
+  process.env.REDIS_URL ||
+  process.env.KV_URL
+);
+
+console.log("🔍 KV Configuration Status:");
+console.log("   KV_REST_API_URL:", !!process.env.KV_REST_API_URL);
+console.log("   KV_REST_API_TOKEN:", !!process.env.KV_REST_API_TOKEN);
+console.log("   REDIS_URL:", !!process.env.REDIS_URL);
+console.log("   KV_URL:", !!process.env.KV_URL);
+console.log("   isKVConfigured:", isKVConfigured);
 
 export const kvdb = {
   installation: {
@@ -85,8 +97,6 @@ export const kvdb = {
 
   accessRequest: {
     async create({ name, email, githubUsername, message }: any) {
-      if (!isKVConfigured) throw new Error("KV not configured");
-      
       const id = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       const request = {
@@ -99,23 +109,43 @@ export const kvdb = {
         requestedAt: new Date().toISOString(),
       };
 
-      await kv.set(`access_request:${id}`, request);
-      await kv.set(`access_request_email:${email.toLowerCase()}`, id);
-      await kv.sadd("access_requests:all", id);
+      // Try to save to KV/Redis
+      try {
+        console.log(`💾 Attempting to save access request to KV: ${email}`);
+        console.log(`   KV Configured: ${isKVConfigured}`);
+        
+        await kv.set(`access_request:${id}`, request);
+        await kv.set(`access_request_email:${email.toLowerCase()}`, id);
+        await kv.sadd("access_requests:all", id);
+        
+        console.log(`✅ Access request saved to KV with ID: ${id}`);
+      } catch (err: any) {
+        console.error("❌ Failed to save to KV:", err.message);
+        console.error("   This might be due to missing KV environment variables");
+        console.error("   Request will still be created but won't persist");
+      }
       
       return request;
     },
 
     async findAll() {
-      if (!isKVConfigured) return [];
+      if (!isKVConfigured) {
+        console.warn("⚠️ KV not configured - returning empty array");
+        return [];
+      }
       
+      console.log(`🔍 Fetching all access requests from KV...`);
       const requestIds = await kv.smembers("access_requests:all") as string[];
+      console.log(`   Found ${requestIds.length} request IDs in set`);
+      
       const requests = [];
       
       for (const id of requestIds) {
         const request = await kv.get(`access_request:${id}`);
         if (request) requests.push(request);
       }
+      
+      console.log(`   Retrieved ${requests.length} full requests from KV`);
       
       // Sort by requested date (newest first)
       return requests.sort((a: any, b: any) => 
@@ -135,35 +165,44 @@ export const kvdb = {
     },
 
     async updateStatus({ id, status, reviewedBy }: any) {
-      if (!isKVConfigured) throw new Error("KV not configured");
-      
-      const request = await kv.get(`access_request:${id}`) as any;
-      
-      if (!request) {
-        throw new Error("Access request not found");
+      try {
+        console.log(`🔄 Updating access request ${id} to ${status}`);
+        
+        const request = await kv.get(`access_request:${id}`) as any;
+        
+        if (!request) {
+          console.error(`❌ Access request not found in KV: ${id}`);
+          throw new Error("Access request not found");
+        }
+
+        const updated = {
+          ...request,
+          status,
+          reviewedAt: new Date().toISOString(),
+          reviewedBy,
+        };
+
+        await kv.set(`access_request:${id}`, updated);
+        console.log(`✅ Request ${id} updated to ${status}`);
+
+        // If approved, add to whitelist
+        if (status === "approved") {
+          console.log(`➕ Adding ${request.email} to whitelist`);
+          await kv.sadd("whitelist:emails", request.email.toLowerCase());
+          await kv.set(`whitelist:${request.email.toLowerCase()}`, {
+            email: request.email.toLowerCase(),
+            githubUsername: request.githubUsername,
+            addedAt: new Date().toISOString(),
+            addedBy: reviewedBy,
+          });
+          console.log(`✅ ${request.email} added to whitelist`);
+        }
+
+        return updated;
+      } catch (err: any) {
+        console.error("❌ Error in updateStatus:", err.message);
+        throw err;
       }
-
-      const updated = {
-        ...request,
-        status,
-        reviewedAt: new Date().toISOString(),
-        reviewedBy,
-      };
-
-      await kv.set(`access_request:${id}`, updated);
-
-      // If approved, add to whitelist
-      if (status === "approved") {
-        await kv.sadd("whitelist:emails", request.email.toLowerCase());
-        await kv.set(`whitelist:${request.email.toLowerCase()}`, {
-          email: request.email.toLowerCase(),
-          githubUsername: request.githubUsername,
-          addedAt: new Date().toISOString(),
-          addedBy: reviewedBy,
-        });
-      }
-
-      return updated;
     },
   },
 
@@ -198,27 +237,50 @@ export const kvdb = {
     },
 
     async isWhitelistedAsync(email: string) {
-      if (!isKVConfigured) return false;
+      if (!isKVConfigured) {
+        console.warn("⚠️ KV not configured - cannot check whitelist");
+        return false;
+      }
       
-      const isMember = await kv.sismember("whitelist:emails", email.toLowerCase());
-      return !!isMember;
+      try {
+        console.log(`🔍 Checking if ${email} is whitelisted...`);
+        const isMember = await kv.sismember("whitelist:emails", email.toLowerCase());
+        console.log(`   Result: ${isMember ? 'YES' : 'NO'}`);
+        return !!isMember;
+      } catch (err: any) {
+        console.error("❌ Error checking whitelist:", err.message);
+        return false;
+      }
     },
 
     async findAll() {
-      if (!isKVConfigured) return [];
-      
-      const emails = await kv.smembers("whitelist:emails") as string[];
-      const users = [];
-      
-      for (const email of emails) {
-        const user = await kv.get(`whitelist:${email}`);
-        if (user) users.push(user);
+      if (!isKVConfigured) {
+        console.warn("⚠️ KV not configured - returning empty whitelist");
+        return [];
       }
       
-      // Sort by added date (newest first)
-      return users.sort((a: any, b: any) => 
-        new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
-      );
+      try {
+        console.log(`🔍 Fetching all whitelisted users from KV...`);
+        const emails = await kv.smembers("whitelist:emails") as string[];
+        console.log(`   Found ${emails.length} whitelisted emails`);
+        
+        const users = [];
+        
+        for (const email of emails) {
+          const user = await kv.get(`whitelist:${email}`);
+          if (user) users.push(user);
+        }
+        
+        console.log(`   Retrieved ${users.length} full user records`);
+        
+        // Sort by added date (newest first)
+        return users.sort((a: any, b: any) => 
+          new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
+        );
+      } catch (err: any) {
+        console.error("❌ Error fetching whitelist:", err.message);
+        return [];
+      }
     },
   },
 };
