@@ -372,11 +372,12 @@ export default function HomePage() {
         
         <div className="text-xs text-gray-400 pt-4">
           Admin?{" "}
-          <a href="/admin" className="text-gray-600 hover:underline">
+          <a href="/admin" className="text-gray-600 dark:text-gray-400 hover:underline">
             Access Admin Dashboard
           </a>
         </div>
       </section>
+      </div>
     </main>
   );
 }
