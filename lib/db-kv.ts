@@ -436,5 +436,112 @@ export const kvdb = {
       }
     },
   },
+
+  prReview: {
+    async create({ owner, repo, prNumber, prTitle, reviewedBy, issuesFound, hasHighSeverity }: any) {
+      if (!isKVConfigured) {
+        console.warn("⚠️ Redis not configured, skipping PR review save");
+        return;
+      }
+
+      try {
+        const id = `review_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const review = {
+          id,
+          owner,
+          repo,
+          prNumber,
+          prTitle,
+          reviewedBy,
+          issuesFound,
+          hasHighSeverity,
+          reviewedAt: new Date().toISOString(),
+        };
+
+        const redis = await getRedisClient();
+        
+        // Store the review
+        await redis.set(`pr_review:${id}`, JSON.stringify(review));
+        
+        // Add to user's reviews set (indexed by reviewedBy)
+        await redis.sAdd(`pr_reviews:user:${reviewedBy}`, id);
+        
+        // Add to all reviews set
+        await redis.sAdd("pr_reviews:all", id);
+        
+        console.log(`✅ PR review saved: ${owner}/${repo}#${prNumber} for ${reviewedBy}`);
+        
+        return review;
+      } catch (err: any) {
+        console.error("❌ Error saving PR review:", err.message);
+      }
+    },
+
+    async getByUser(username: string, limit: number = 10) {
+      if (!isKVConfigured) return [];
+
+      try {
+        const redis = await getRedisClient();
+        
+        // Get all review IDs for this user
+        const reviewIds = await redis.sMembers(`pr_reviews:user:${username}`) as string[];
+        
+        // Fetch all reviews
+        const reviews = [];
+        for (const id of reviewIds) {
+          const data = await redis.get(`pr_review:${id}`);
+          if (data) {
+            const review = typeof data === 'string' ? JSON.parse(data) : data;
+            reviews.push(review);
+          }
+        }
+        
+        // Sort by date (newest first) and limit
+        return reviews
+          .sort((a: any, b: any) => 
+            new Date(b.reviewedAt).getTime() - new Date(a.reviewedAt).getTime()
+          )
+          .slice(0, limit);
+      } catch (err: any) {
+        console.error("❌ Error fetching PR reviews:", err.message);
+        return [];
+      }
+    },
+
+    async getStats(username: string) {
+      if (!isKVConfigured) {
+        return {
+          totalReviews: 0,
+          cleanPRs: 0,
+          criticalIssues: 0,
+          totalIssues: 0,
+        };
+      }
+
+      try {
+        const reviews = await this.getByUser(username, 1000); // Get all reviews
+        
+        const totalReviews = reviews.length;
+        const cleanPRs = reviews.filter((r: any) => r.issuesFound === 0).length;
+        const criticalIssues = reviews.filter((r: any) => r.hasHighSeverity).length;
+        const totalIssues = reviews.reduce((sum: number, r: any) => sum + r.issuesFound, 0);
+        
+        return {
+          totalReviews,
+          cleanPRs,
+          criticalIssues,
+          totalIssues,
+        };
+      } catch (err: any) {
+        console.error("❌ Error calculating stats:", err.message);
+        return {
+          totalReviews: 0,
+          cleanPRs: 0,
+          criticalIssues: 0,
+          totalIssues: 0,
+        };
+      }
+    },
+  },
 };
 

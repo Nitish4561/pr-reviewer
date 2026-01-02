@@ -210,11 +210,10 @@ export async function POST(req: Request) {
         openaiApiKey: installation.openaiKey,
       });
 
-      // 📊 Save review to database
+      // 📊 Save review to database (Redis for persistence)
       if (reviewResult) {
         try {
-          const { prReviewDb } = await import("@/lib/db-enhanced");
-          await prReviewDb.create({
+          await kvdb.prReview.create({
             owner,
             repo,
             prNumber: pull_number,
@@ -222,12 +221,10 @@ export async function POST(req: Request) {
             reviewedBy: installation.accountLogin,
             issuesFound: reviewResult.issuesFound,
             hasHighSeverity: reviewResult.hasHighSeverity,
-            summary: `${reviewResult.issuesFound} issues found${reviewResult.hasHighSeverity ? ' (critical)' : ''}`,
-            installationId,
           });
-          console.log("💾 Review saved to database");
+          console.log("💾 Review saved to Redis (persistent storage)");
         } catch (err: any) {
-          console.error("⚠️ Failed to save review to database:", err.message);
+          console.error("⚠️ Failed to save review to Redis:", err.message);
           // Don't fail the whole process if DB save fails
         }
       }
