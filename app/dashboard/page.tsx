@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { SimpleBarChart, SimplePieChart } from "@/components/SimpleChart";
+import ThemeToggle from "@/components/ThemeToggle";
+import Modal from "@/components/Modal";
 
 interface PRReview {
   id: string;
@@ -36,8 +38,23 @@ export default function DashboardPage() {
   const [hasKey, setHasKey] = useState(false);
   const [keyPreview, setKeyPreview] = useState<string | null>(null);
   const [isEditingKey, setIsEditingKey] = useState(false);
+  const [username, setUsername] = useState<string>("");
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "info" | "success" | "warning" | "danger";
+    onConfirm?: () => void;
+    showCancel?: boolean;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
 
   useEffect(() => {
+    fetchCurrentUser();
     fetchReviews();
     checkInstallation();
     fetchKeyStatus();
@@ -53,6 +70,20 @@ export default function DashboardPage() {
       setTimeout(() => checkInstallation(), 1000);
     }
   }, []);
+
+  async function fetchCurrentUser() {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setUsername(data.user.githubUsername || data.user.email.split("@")[0]);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch current user:", err);
+    }
+  }
 
   async function checkInstallation() {
     try {
@@ -128,25 +159,31 @@ export default function DashboardPage() {
   }
 
   async function deleteKey() {
-    if (!confirm("Are you sure you want to delete your OpenAI API key?")) {
-      return;
-    }
+    showModal(
+      "Delete OpenAI API Key",
+      "Are you sure you want to delete your OpenAI API key?\n\nNirikshanAI won't be able to review PRs until you add a new key.",
+      "danger",
+      async () => {
+        setError("");
+        const res = await fetch("/api/user/settings", {
+          method: "DELETE",
+        });
 
-    setError("");
-    const res = await fetch("/api/user/settings", {
-      method: "DELETE",
-    });
-
-    if (res.ok) {
-      setHasKey(false);
-      setKeyPreview(null);
-      setKey("");
-      setSaved(false);
-      setIsEditingKey(false);
-    } else {
-      const data = await res.json();
-      setError(data.error || "Failed to delete key");
-    }
+        if (res.ok) {
+          setHasKey(false);
+          setKeyPreview(null);
+          setKey("");
+          setSaved(false);
+          setIsEditingKey(false);
+          showModal("Success", "OpenAI API key deleted successfully.", "success");
+        } else {
+          const data = await res.json();
+          setError(data.error || "Failed to delete key");
+          showModal("Error", data.error || "Failed to delete key", "danger");
+        }
+      },
+      true
+    );
   }
 
   function startEditingKey() {
@@ -163,46 +200,79 @@ export default function DashboardPage() {
     setError("");
   }
 
+  const showModal = (
+    title: string,
+    message: string,
+    type: "info" | "success" | "warning" | "danger",
+    onConfirm?: () => void,
+    showCancel: boolean = false
+  ) => {
+    setModal({ isOpen: true, title, message, type, onConfirm, showCancel });
+  };
+
+  const closeModal = () => {
+    setModal({ ...modal, isOpen: false });
+  };
+
   return (
-    <div className="mx-auto max-w-6xl px-6 py-12 space-y-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={closeModal}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        onConfirm={modal.onConfirm}
+        showCancel={modal.showCancel}
+      />
+      
+      <div className="mx-auto max-w-6xl px-6 py-12 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">📊 Dashboard</h1>
-          <p className="mt-1 text-gray-600">
+          {username && (
+            <p className="text-lg text-gray-600 dark:text-gray-300 mb-1">
+              Welcome, <span className="font-semibold text-gray-900 dark:text-gray-100">{username}</span>! 👋
+            </p>
+          )}
+          <h1 className="text-3xl font-bold dark:text-white">📊 Dashboard</h1>
+          <p className="mt-1 text-gray-600 dark:text-gray-300">
             View your PR reviews and configure settings
           </p>
         </div>
-        <a
-          href="/"
-          className="text-sm text-gray-600 hover:text-gray-900"
-        >
-          ← Home
-        </a>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <a
+            href="/"
+            className="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+          >
+            ← Home
+          </a>
+        </div>
       </div>
 
       {/* Welcome Message for New Users */}
       {!loading && stats?.totalReviews === 0 && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 p-6">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border-2 border-blue-200 dark:border-blue-700 p-6">
           <div className="flex items-start gap-4">
             <div className="text-4xl">👋</div>
             <div className="flex-1">
-              <h2 className="text-xl font-bold text-gray-900 mb-2">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
                 Welcome to NirikshanAI!
               </h2>
-              <p className="text-gray-700 mb-4">
+              <p className="text-gray-700 dark:text-gray-300 mb-4">
                 Get started in 3 simple steps:
               </p>
-              <ol className="space-y-2 text-sm text-gray-700">
+              <ol className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
                 <li className="flex items-start gap-2">
-                  <span className="font-bold text-blue-600">1.</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400">1.</span>
                   <span>Add your OpenAI API key below</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-bold text-blue-600">2.</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400">2.</span>
                   <span>Install the GitHub App on your repositories</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-bold text-blue-600">3.</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400">3.</span>
                   <span>Create or update a PR to see NirikshanAI review it automatically!</span>
                 </li>
               </ol>
@@ -213,22 +283,22 @@ export default function DashboardPage() {
 
       {/* Installation Success Message */}
       {showInstallSuccess && (
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200 p-6">
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border-2 border-green-200 dark:border-green-700 p-6">
           <div className="flex items-start gap-4">
             <div className="text-4xl">🎉</div>
             <div className="flex-1">
-              <h2 className="text-xl font-bold text-gray-900 mb-2">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
                 GitHub App Installed Successfully!
               </h2>
-              <p className="text-gray-700 mb-3">
+              <p className="text-gray-700 dark:text-gray-300 mb-3">
                 Great! NirikshanAI is now installed on your repositories.
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Next step: Add your OpenAI API key below to start reviewing PRs.
               </p>
               <button
                 onClick={() => setShowInstallSuccess(false)}
-                className="mt-4 text-sm text-green-600 hover:text-green-700 font-medium"
+                className="mt-4 text-sm text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium"
               >
                 Dismiss
               </button>
@@ -241,40 +311,40 @@ export default function DashboardPage() {
       {stats && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div className="bg-white rounded-lg border p-6">
-              <div className="text-2xl font-bold text-blue-600">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 {stats.totalReviews}
               </div>
-              <div className="text-sm text-gray-600">Total Reviews</div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">Total Reviews</div>
             </div>
-            <div className="bg-white rounded-lg border p-6">
-              <div className="text-2xl font-bold text-green-600">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6">
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                 {stats.cleanPRs}
               </div>
-              <div className="text-sm text-gray-600">Clean PRs</div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">Clean PRs</div>
             </div>
-            <div className="bg-white rounded-lg border p-6">
-              <div className="text-2xl font-bold text-red-600">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6">
+              <div className="text-2xl font-bold text-red-600 dark:text-red-400">
                 {stats.criticalIssues}
               </div>
-              <div className="text-sm text-gray-600">Critical Issues</div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">Critical Issues</div>
             </div>
-            <div className="bg-white rounded-lg border p-6">
-              <div className="text-2xl font-bold text-orange-600">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6">
+              <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                 {stats.totalIssues}
               </div>
-              <div className="text-sm text-gray-600">Total Issues</div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">Total Issues</div>
             </div>
           </div>
 
           {/* Charts Section */}
           {stats.totalReviews > 0 && (
-            <div className="bg-white rounded-lg border p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold">📊 Review Analytics</h2>
+                <h2 className="text-xl font-semibold dark:text-white">📊 Review Analytics</h2>
                 <button
                   onClick={() => setShowCharts(!showCharts)}
-                  className="text-sm text-blue-600 hover:underline"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   {showCharts ? "Hide" : "Show"} Charts
                 </button>
@@ -284,7 +354,7 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* PR Status Distribution */}
                   <div>
-                    <h3 className="text-lg font-medium mb-4">PR Status Distribution</h3>
+                    <h3 className="text-lg font-medium dark:text-gray-100 mb-4">PR Status Distribution</h3>
                     <SimplePieChart
                       data={[
                         { label: "Clean PRs", value: stats.cleanPRs, color: "#10b981" },
@@ -296,7 +366,7 @@ export default function DashboardPage() {
 
                   {/* Issue Severity */}
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Review Metrics</h3>
+                    <h3 className="text-lg font-medium dark:text-gray-100 mb-4">Review Metrics</h3>
                     <SimpleBarChart
                       data={[
                         { label: "Total Reviews", value: stats.totalReviews, color: "#3b82f6" },
@@ -315,61 +385,61 @@ export default function DashboardPage() {
 
       {/* Recent PR Reviews */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">📋 Recent PR Reviews</h2>
+        <h2 className="text-xl font-semibold dark:text-white">📋 Recent PR Reviews</h2>
 
         {loading ? (
-          <div className="bg-white rounded-lg border p-8 text-center text-gray-500">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-8 text-center text-gray-500 dark:text-gray-400">
             Loading reviews...
           </div>
         ) : reviews.length === 0 ? (
-          <div className="bg-white rounded-lg border p-8 text-center text-gray-500">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-8 text-center text-gray-500 dark:text-gray-400">
             No PR reviews yet. Reviews will appear here after NirikshanAI analyzes your pull requests.
           </div>
         ) : (
-          <div className="bg-white rounded-lg border overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 overflow-hidden">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     PR Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Issues
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Action
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {reviews.map((review) => (
                   <tr
                     key={review.id}
-                    className={`hover:bg-gray-50 transition-colors ${
+                    className={`hover:opacity-90 transition-colors ${
                       review.issuesFound === 0 
-                        ? "bg-green-50" 
-                        : "bg-red-50"
+                        ? "bg-green-50 dark:bg-green-900/20" 
+                        : "bg-red-50 dark:bg-red-900/20"
                     }`}
                   >
                     <td className="px-6 py-4">
                       <div>
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-gray-900 dark:text-gray-100">
                           {review.owner}/{review.repo} #{review.prNumber}
                         </div>
-                        <div className="text-sm text-gray-600 mt-1">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                           {review.prTitle}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
                       {new Date(review.reviewedAt).toLocaleDateString()}
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-gray-400 dark:text-gray-500">
                         {new Date(review.reviewedAt).toLocaleTimeString()}
                       </div>
                     </td>
@@ -389,11 +459,11 @@ export default function DashboardPage() {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {review.issuesFound}
                       </div>
                       {review.hasHighSeverity && (
-                        <div className="text-xs text-red-600">
+                        <div className="text-xs text-red-600 dark:text-red-400">
                           Critical
                         </div>
                       )}
@@ -403,7 +473,7 @@ export default function DashboardPage() {
                         href={`https://github.com/${review.owner}/${review.repo}/pull/${review.prNumber}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
                       >
                         View PR →
                       </a>
@@ -419,9 +489,9 @@ export default function DashboardPage() {
       {/* Setup Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* OpenAI Key */}
-        <div className="rounded-xl border bg-white p-6">
-          <h2 className="text-lg font-semibold">🔑 OpenAI API Key</h2>
-        <p className="mt-1 text-sm text-gray-600">
+        <div className="rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
+          <h2 className="text-lg font-semibold dark:text-white">🔑 OpenAI API Key</h2>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
           This key is used only to generate reviews for your pull requests.
         </p>
 
@@ -433,11 +503,11 @@ export default function DashboardPage() {
                 type="password"
                 value={keyPreview || ""}
                 disabled
-                className="flex-1 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700"
+                className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-300"
               />
               <button
                 onClick={startEditingKey}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
               >
                 Edit
               </button>
@@ -448,7 +518,7 @@ export default function DashboardPage() {
                 Delete
               </button>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               ✅ OpenAI API key is configured
             </p>
           </div>
@@ -462,7 +532,7 @@ export default function DashboardPage() {
           placeholder="sk-proj-..."
           value={key}
           onChange={(e) => setKey(e.target.value)}
-              className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-md border dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
         />
 
             <div className="flex gap-2">
@@ -476,7 +546,7 @@ export default function DashboardPage() {
               {isEditingKey && (
                 <button
                   onClick={cancelEditingKey}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                 >
                   Cancel
                 </button>
@@ -484,12 +554,12 @@ export default function DashboardPage() {
             </div>
 
         {saved && (
-              <p className="text-sm text-green-600">
+              <p className="text-sm text-green-600 dark:text-green-400">
             ✅ Key saved successfully
           </p>
         )}
         {error && (
-              <p className="text-sm text-red-600">
+              <p className="text-sm text-red-600 dark:text-red-400">
             {error}
           </p>
         )}
@@ -498,16 +568,16 @@ export default function DashboardPage() {
       </div>
 
         {/* GitHub App Installation */}
-        <div className="rounded-xl border bg-white p-6">
-          <h2 className="text-lg font-semibold">🔗 GitHub App</h2>
-          <p className="mt-1 text-sm text-gray-600">
+        <div className="rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
+          <h2 className="text-lg font-semibold dark:text-white">🔗 GitHub App</h2>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
             {isInstalled 
               ? "NirikshanAI is installed on your repositories."
               : "Install NirikshanAI on your repositories to enable PR reviews."}
           </p>
           
           {/* Debug Info */}
-          <div className="mt-2 text-xs text-gray-400">
+          <div className="mt-2 text-xs text-gray-400 dark:text-gray-500">
             Debug: isInstalled = {String(isInstalled)}
           </div>
 
@@ -515,7 +585,7 @@ export default function DashboardPage() {
             {!isInstalled ? (
               <a
                 href={`https://github.com/apps/${process.env.NEXT_PUBLIC_GITHUB_APP_SLUG || "nirikshanai"}/installations/new`}
-                className="block w-full text-center rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
+                className="block w-full text-center rounded-md bg-gray-900 dark:bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-indigo-700 transition"
               >
                 Install NirikshanAI
               </a>
@@ -524,7 +594,7 @@ export default function DashboardPage() {
                 href={`https://github.com/apps/${process.env.NEXT_PUBLIC_GITHUB_APP_SLUG || "nirikshanai"}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block w-full text-center rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
+                className="block w-full text-center rounded-md bg-gray-900 dark:bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-indigo-700 transition"
               >
                 Uninstall NirikshanAI
               </a>
@@ -534,14 +604,14 @@ export default function DashboardPage() {
               href="https://github.com/settings/installations"
           target="_blank"
           rel="noopener noreferrer"
-              className="block w-full text-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+              className="block w-full text-center rounded-md border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
             >
               View All Installations
             </a>
           </div>
 
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-            <p className="text-xs text-blue-700">
+          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+            <p className="text-xs text-blue-700 dark:text-blue-300">
               💡 After installation, create or update a PR to see NirikshanAI in action!
             </p>
           </div>
@@ -549,9 +619,9 @@ export default function DashboardPage() {
       </div>
 
       {/* How it Works */}
-      <div className="rounded-xl bg-gray-50 p-6">
-        <h3 className="font-semibold">📋 How NirikshanAI Works</h3>
-        <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-gray-700">
+      <div className="rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 p-6">
+        <h3 className="font-semibold dark:text-white">📋 How NirikshanAI Works</h3>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-gray-700 dark:text-gray-300">
           <li>Add your OpenAI API key above</li>
           <li>Create or update a pull request in your repository</li>
           <li>NirikshanAI automatically analyzes the code</li>
@@ -559,6 +629,7 @@ export default function DashboardPage() {
           <li>Review history appears here on your dashboard</li>
         </ol>
       </div>
+    </div>
     </div>
   );
 }

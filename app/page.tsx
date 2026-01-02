@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import ThemeToggle from "@/components/ThemeToggle";
 
 function ErrorHandler({ setStatus }: { setStatus: (status: string) => void }) {
   const searchParams = useSearchParams();
@@ -93,28 +94,34 @@ export default function HomePage() {
   }
 
   return (
-    <main className="max-w-5xl mx-auto px-6 py-20 space-y-20">
-      <Suspense fallback={null}>
-        <ErrorHandler setStatus={setStatus} />
-      </Suspense>
-
-      {/* Hero */}
-      <section className="text-center space-y-6">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 text-sm font-medium">
-          <span>🔒</span>
-          <span>Private Beta</span>
+    <main className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+      <div className="max-w-5xl mx-auto px-6 py-20 space-y-20">
+        {/* Theme Toggle */}
+        <div className="fixed top-6 right-6 z-10">
+          <ThemeToggle />
         </div>
 
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
-          NirikshanAI
-        </h1>
-        <p className="text-xl text-gray-600">
-          AI-powered Pull Request reviews that think like a senior engineer.
-        </p>
+        <Suspense fallback={null}>
+          <ErrorHandler setStatus={setStatus} />
+        </Suspense>
+
+        {/* Hero */}
+        <section className="text-center space-y-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-sm font-medium">
+            <span>🔒</span>
+            <span>Private Beta</span>
+          </div>
+
+          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight dark:text-white">
+            NirikshanAI
+          </h1>
+          <p className="text-xl text-gray-600 dark:text-gray-300">
+            AI-powered Pull Request reviews that think like a senior engineer.
+          </p>
 
         {/* Show error/status messages */}
         {status && (
-          <div className={`p-4 rounded-lg ${status.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          <div className={`p-4 rounded-lg ${status.startsWith('✅') || status.startsWith('🎉') ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>
             {status}
           </div>
         )}
@@ -133,7 +140,7 @@ export default function HomePage() {
                 
                 <a
                   href="/api/auth/github"
-                  className="rounded-lg bg-gray-900 px-6 py-3 text-white font-medium hover:bg-gray-800 transition-colors"
+                  className="rounded-lg bg-gray-900 dark:bg-indigo-600 px-6 py-3 text-white font-medium hover:bg-gray-800 dark:hover:bg-indigo-700 transition-colors"
                 >
                   Sign in with GitHub
                 </a>
@@ -153,7 +160,7 @@ export default function HomePage() {
             </p>
             
             <p className="text-sm text-gray-400 mt-4">
-              Admin? <a href="/admin" className="text-blue-600 hover:underline">Login here</a>
+              Admin? <a href="/admin" className="text-blue-600 dark:text-blue-400 hover:underline">Login here</a>
             </p>
           </>
         ) : showCheckStatus ? (
