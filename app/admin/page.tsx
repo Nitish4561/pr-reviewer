@@ -285,7 +285,7 @@ export default function AdminPage() {
                     )}
                   </div>
 
-                  {req.status === "pending" && (
+                  {req.status === "pending" ? (
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleUpdateStatus(req.id, "approved")}
@@ -311,7 +311,16 @@ export default function AdminPage() {
                         Delete
                       </button>
                     </div>
-                  )}
+                  ) : req.status === "approved" ? (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleRevokeAccess(req.email)}
+                        className="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700"
+                      >
+                        Revoke Access
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ))}
