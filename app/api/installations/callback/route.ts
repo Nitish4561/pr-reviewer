@@ -27,15 +27,16 @@ export async function GET(req: Request) {
     return NextResponse.redirect(`${baseUrl}/api/auth/github/callback?code=${code}`);
   }
 
-  // Redirect back to homepage with success message
-  // Users can then sign in and go to dashboard
+  // Redirect back to dashboard after successful installation
+  // If user has active session → dashboard loads
+  // If session expired → middleware redirects to homepage
   if (setupAction === "install" && installationId) {
-    console.log(`✅ Redirecting to homepage after successful installation`);
-    return NextResponse.redirect(`${baseUrl}/?installation=success`);
+    console.log(`✅ Redirecting to dashboard after successful installation`);
+    return NextResponse.redirect(`${baseUrl}/dashboard?installation=success`);
   }
 
-  // For updates or other actions, also redirect to homepage
-  console.log(`✅ Redirecting to homepage`);
-  return NextResponse.redirect(`${baseUrl}/`);
+  // For updates or other actions, also redirect to dashboard
+  console.log(`✅ Redirecting to dashboard`);
+  return NextResponse.redirect(`${baseUrl}/dashboard`);
 }
 

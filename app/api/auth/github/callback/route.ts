@@ -14,11 +14,11 @@ export async function GET(req: Request) {
   console.log("   Setup Action:", setupAction || "none");
 
   // If this is an installation callback (has installation_id but no OAuth flow needed)
-  // Redirect to installation callback endpoint
+  // Redirect directly to dashboard - user is already authenticated from installation flow
   if (installationId && setupAction) {
-    console.log("   Detected installation callback, redirecting to installation endpoint");
+    console.log("   Detected installation callback, redirecting to dashboard");
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:4002";
-    return NextResponse.redirect(`${baseUrl}/?installation=success`);
+    return NextResponse.redirect(`${baseUrl}/dashboard?installation=success`);
   }
 
   if (!code) {
