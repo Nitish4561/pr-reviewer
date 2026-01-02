@@ -1,20 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function HomePage() {
+function ErrorHandler({ setStatus }: { setStatus: (status: string) => void }) {
   const searchParams = useSearchParams();
-  const [showRequestForm, setShowRequestForm] = useState(false);
-  const [showCheckStatus, setShowCheckStatus] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [githubUsername, setGithubUsername] = useState("");
-  const [message, setMessage] = useState("");
-  const [status, setStatus] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [checkEmail, setCheckEmail] = useState("");
-  const [approvalStatus, setApprovalStatus] = useState<any>(null);
 
   useEffect(() => {
     // Check for error in URL params
@@ -28,7 +18,22 @@ export default function HomePage() {
     } else if (error === "unauthorized") {
       setStatus("❌ Please sign in to access that page.");
     }
-  }, [searchParams]);
+  }, [searchParams, setStatus]);
+
+  return null;
+}
+
+export default function HomePage() {
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [showCheckStatus, setShowCheckStatus] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [githubUsername, setGithubUsername] = useState("");
+  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [checkEmail, setCheckEmail] = useState("");
+  const [approvalStatus, setApprovalStatus] = useState<any>(null);
 
   async function handleRequestAccess(e: React.FormEvent) {
     e.preventDefault();
@@ -84,6 +89,9 @@ export default function HomePage() {
 
   return (
     <main className="max-w-5xl mx-auto px-6 py-20 space-y-20">
+      <Suspense fallback={null}>
+        <ErrorHandler setStatus={setStatus} />
+      </Suspense>
 
       {/* Hero */}
       <section className="text-center space-y-6">
