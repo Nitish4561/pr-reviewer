@@ -48,7 +48,12 @@ export default function AdminPage() {
         setRequests(data.requests || []);
         setWhitelist(data.whitelist || []);
       } else {
+        // Show error and log out if unauthorized
         alert(data.error || "Failed to fetch data");
+        if (res.status === 403 || res.status === 401) {
+          setIsAuthenticated(false);
+          setAdminEmail("");
+        }
       }
     } catch (err) {
       console.error("Failed to fetch:", err);
