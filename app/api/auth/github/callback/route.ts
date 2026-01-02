@@ -71,13 +71,10 @@ export async function GET(req: Request) {
     console.log(`✅ User logged in: ${user.email} (${user.role})`);
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:4002";
-    const appSlug = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG || "nirikshanai";
     
-    // All approved users go to GitHub App installation page
-    const githubAppUrl = `https://github.com/apps/${appSlug}/installations/new`;
-    
-    console.log(`🔗 Redirecting user to GitHub App installation: ${githubAppUrl}`);
-    return NextResponse.redirect(githubAppUrl);
+    // After successful OAuth, redirect to dashboard
+    console.log(`🔗 Redirecting user to dashboard`);
+    return NextResponse.redirect(`${baseUrl}/dashboard`);
     
   } catch (err: any) {
     console.error("GitHub OAuth error:", err);

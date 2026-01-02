@@ -92,6 +92,37 @@ export default function DashboardPage() {
         </a>
       </div>
 
+      {/* Welcome Message for New Users */}
+      {!loading && stats?.totalReviews === 0 && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 p-6">
+          <div className="flex items-start gap-4">
+            <div className="text-4xl">👋</div>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-gray-900 mb-2">
+                Welcome to NirikshanAI!
+              </h2>
+              <p className="text-gray-700 mb-4">
+                Get started in 3 simple steps:
+              </p>
+              <ol className="space-y-2 text-sm text-gray-700">
+                <li className="flex items-start gap-2">
+                  <span className="font-bold text-blue-600">1.</span>
+                  <span>Add your OpenAI API key below</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold text-blue-600">2.</span>
+                  <span>Install the GitHub App on your repositories</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold text-blue-600">3.</span>
+                  <span>Create or update a PR to see NirikshanAI review it automatically!</span>
+                </li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stats Cards */}
       {stats && (
         <>
