@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { SimpleBarChart, SimplePieChart } from "@/components/SimpleChart";
 
 interface PRReview {
   id: string;
@@ -29,6 +30,7 @@ export default function DashboardPage() {
   const [reviews, setReviews] = useState<PRReview[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showCharts, setShowCharts] = useState(true);
 
   useEffect(() => {
     fetchReviews();
@@ -92,32 +94,78 @@ export default function DashboardPage() {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg border p-6">
-            <div className="text-2xl font-bold text-blue-600">
-              {stats.totalReviews}
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="bg-white rounded-lg border p-6">
+              <div className="text-2xl font-bold text-blue-600">
+                {stats.totalReviews}
+              </div>
+              <div className="text-sm text-gray-600">Total Reviews</div>
             </div>
-            <div className="text-sm text-gray-600">Total Reviews</div>
-          </div>
-          <div className="bg-white rounded-lg border p-6">
-            <div className="text-2xl font-bold text-green-600">
-              {stats.cleanPRs}
+            <div className="bg-white rounded-lg border p-6">
+              <div className="text-2xl font-bold text-green-600">
+                {stats.cleanPRs}
+              </div>
+              <div className="text-sm text-gray-600">Clean PRs</div>
             </div>
-            <div className="text-sm text-gray-600">Clean PRs</div>
-          </div>
-          <div className="bg-white rounded-lg border p-6">
-            <div className="text-2xl font-bold text-red-600">
-              {stats.criticalIssues}
+            <div className="bg-white rounded-lg border p-6">
+              <div className="text-2xl font-bold text-red-600">
+                {stats.criticalIssues}
+              </div>
+              <div className="text-sm text-gray-600">Critical Issues</div>
             </div>
-            <div className="text-sm text-gray-600">Critical Issues</div>
-          </div>
-          <div className="bg-white rounded-lg border p-6">
-            <div className="text-2xl font-bold text-orange-600">
-              {stats.totalIssues}
+            <div className="bg-white rounded-lg border p-6">
+              <div className="text-2xl font-bold text-orange-600">
+                {stats.totalIssues}
+              </div>
+              <div className="text-sm text-gray-600">Total Issues</div>
             </div>
-            <div className="text-sm text-gray-600">Total Issues</div>
           </div>
-        </div>
+
+          {/* Charts Section */}
+          {stats.totalReviews > 0 && (
+            <div className="bg-white rounded-lg border p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold">📊 Review Analytics</h2>
+                <button
+                  onClick={() => setShowCharts(!showCharts)}
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  {showCharts ? "Hide" : "Show"} Charts
+                </button>
+              </div>
+
+              {showCharts && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* PR Status Distribution */}
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">PR Status Distribution</h3>
+                    <SimplePieChart
+                      data={[
+                        { label: "Clean PRs", value: stats.cleanPRs, color: "#10b981" },
+                        { label: "With Issues", value: stats.totalReviews - stats.cleanPRs - stats.criticalIssues, color: "#f59e0b" },
+                        { label: "Critical", value: stats.criticalIssues, color: "#ef4444" },
+                      ]}
+                    />
+                  </div>
+
+                  {/* Issue Severity */}
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Review Metrics</h3>
+                    <SimpleBarChart
+                      data={[
+                        { label: "Total Reviews", value: stats.totalReviews, color: "#3b82f6" },
+                        { label: "Clean PRs", value: stats.cleanPRs, color: "#10b981" },
+                        { label: "Critical Issues", value: stats.criticalIssues, color: "#ef4444" },
+                        { label: "Total Issues", value: stats.totalIssues, color: "#f59e0b" },
+                      ]}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {/* Recent PR Reviews */}
@@ -181,38 +229,75 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* OpenAI Key */}
-      <div className="rounded-xl border bg-white p-6">
-        <h2 className="text-lg font-semibold">🔑 OpenAI API Key</h2>
-        <p className="mt-1 text-sm text-gray-600">
-          This key is used only to generate reviews for your pull requests.
-        </p>
-
-        <input
-          type="password"
-          placeholder="sk-proj-..."
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
-          className="mt-4 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
-
-        <button
-          onClick={saveKey}
-          className="mt-4 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition"
-        >
-          Save OpenAI Key
-        </button>
-
-        {saved && (
-          <p className="mt-2 text-sm text-green-600">
-            ✅ Key saved successfully
+      {/* Setup Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* OpenAI Key */}
+        <div className="rounded-xl border bg-white p-6">
+          <h2 className="text-lg font-semibold">🔑 OpenAI API Key</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            This key is used only to generate reviews for your pull requests.
           </p>
-        )}
-        {error && (
-          <p className="mt-2 text-sm text-red-600">
-            {error}
+
+          <input
+            type="password"
+            placeholder="sk-proj-..."
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            className="mt-4 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+
+          <button
+            onClick={saveKey}
+            className="mt-4 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition"
+          >
+            Save OpenAI Key
+          </button>
+
+          {saved && (
+            <p className="mt-2 text-sm text-green-600">
+              ✅ Key saved successfully
+            </p>
+          )}
+          {error && (
+            <p className="mt-2 text-sm text-red-600">
+              {error}
+            </p>
+          )}
+        </div>
+
+        {/* GitHub App Installation */}
+        <div className="rounded-xl border bg-white p-6">
+          <h2 className="text-lg font-semibold">🔗 GitHub App</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Install NirikshanAI on your repositories to enable PR reviews.
           </p>
-        )}
+
+          <div className="mt-4 space-y-3">
+            <a
+              href={`https://github.com/apps/${process.env.NEXT_PUBLIC_GITHUB_APP_SLUG || "nirikshanai"}/installations/new`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full text-center rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
+            >
+              Install on Repositories
+            </a>
+
+            <a
+              href="https://github.com/settings/installations"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full text-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+            >
+              Manage Installations
+            </a>
+          </div>
+
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-xs text-blue-700">
+              💡 After installation, create or update a PR to see NirikshanAI in action!
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* How it Works */}
