@@ -33,10 +33,14 @@ export default function DashboardPage() {
   const [showCharts, setShowCharts] = useState(true);
   const [isInstalled, setIsInstalled] = useState(false);
   const [showInstallSuccess, setShowInstallSuccess] = useState(false);
+  const [hasKey, setHasKey] = useState(false);
+  const [keyPreview, setKeyPreview] = useState<string | null>(null);
+  const [isEditingKey, setIsEditingKey] = useState(false);
 
   useEffect(() => {
     fetchReviews();
     checkInstallation();
+    fetchKeyStatus();
     
     // Check if redirected from successful installation
     const params = new URLSearchParams(window.location.search);
@@ -66,6 +70,19 @@ export default function DashboardPage() {
     } catch (err) {
       console.error("Failed to check installation:", err);
       setIsInstalled(false);
+    }
+  }
+
+  async function fetchKeyStatus() {
+    try {
+      const res = await fetch("/api/user/settings");
+      if (res.ok) {
+        const data = await res.json();
+        setHasKey(data.hasKey);
+        setKeyPreview(data.keyPreview);
+      }
+    } catch (err) {
+      console.error("Failed to fetch key status:", err);
     }
   }
 
@@ -102,10 +119,48 @@ export default function DashboardPage() {
     if (res.ok) {
       setKey("");
       setSaved(true);
+      setIsEditingKey(false);
+      await fetchKeyStatus(); // Refresh key status
     } else {
       const data = await res.json();
       setError(data.error || "Something went wrong");
     }
+  }
+
+  async function deleteKey() {
+    if (!confirm("Are you sure you want to delete your OpenAI API key?")) {
+      return;
+    }
+
+    setError("");
+    const res = await fetch("/api/user/settings", {
+      method: "DELETE",
+    });
+
+    if (res.ok) {
+      setHasKey(false);
+      setKeyPreview(null);
+      setKey("");
+      setSaved(false);
+      setIsEditingKey(false);
+    } else {
+      const data = await res.json();
+      setError(data.error || "Failed to delete key");
+    }
+  }
+
+  function startEditingKey() {
+    setIsEditingKey(true);
+    setKey("");
+    setSaved(false);
+    setError("");
+  }
+
+  function cancelEditingKey() {
+    setIsEditingKey(false);
+    setKey("");
+    setSaved(false);
+    setError("");
   }
 
   return (
@@ -321,39 +376,84 @@ export default function DashboardPage() {
 
       {/* Setup Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* OpenAI Key */}
+      {/* OpenAI Key */}
         <div className="rounded-xl border bg-white p-6">
           <h2 className="text-lg font-semibold">🔑 OpenAI API Key</h2>
-          <p className="mt-1 text-sm text-gray-600">
-            This key is used only to generate reviews for your pull requests.
-          </p>
+        <p className="mt-1 text-sm text-gray-600">
+          This key is used only to generate reviews for your pull requests.
+        </p>
 
-          <input
-            type="password"
-            placeholder="sk-proj-..."
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-            className="mt-4 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-
-          <button
-            onClick={saveKey}
-            className="mt-4 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition"
-          >
-            Save OpenAI Key
-          </button>
-
-          {saved && (
-            <p className="mt-2 text-sm text-green-600">
-              ✅ Key saved successfully
+        {/* Show saved key (not editing) */}
+        {hasKey && !isEditingKey && (
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center gap-3">
+              <input
+                type="password"
+                value={keyPreview || ""}
+                disabled
+                className="flex-1 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700"
+              />
+              <button
+                onClick={startEditingKey}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+              >
+                Edit
+              </button>
+              <button
+                onClick={deleteKey}
+                className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition"
+              >
+                Delete
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">
+              ✅ OpenAI API key is configured
             </p>
-          )}
-          {error && (
-            <p className="mt-2 text-sm text-red-600">
-              {error}
-            </p>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Show input field (adding new or editing) */}
+        {(!hasKey || isEditingKey) && (
+          <div className="mt-4 space-y-3">
+            <input
+              type="password"
+              placeholder="sk-proj-..."
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+
+            <div className="flex gap-2">
+              <button
+                onClick={saveKey}
+                disabled={!key}
+                className="px-4 py-2 rounded-md bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Save OpenAI Key
+              </button>
+              {isEditingKey && (
+                <button
+                  onClick={cancelEditingKey}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+
+            {saved && (
+              <p className="text-sm text-green-600">
+                ✅ Key saved successfully
+              </p>
+            )}
+            {error && (
+              <p className="text-sm text-red-600">
+                {error}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
 
         {/* GitHub App Installation */}
         <div className="rounded-xl border bg-white p-6">
