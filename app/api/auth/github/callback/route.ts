@@ -5,6 +5,21 @@ import { kvdb } from "@/lib/db-kv";
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
+  const installationId = searchParams.get("installation_id");
+  const setupAction = searchParams.get("setup_action");
+
+  console.log("🔗 OAuth Callback received");
+  console.log("   Code:", code ? "present" : "missing");
+  console.log("   Installation ID:", installationId || "none");
+  console.log("   Setup Action:", setupAction || "none");
+
+  // If this is an installation callback (has installation_id but no OAuth flow needed)
+  // Redirect to installation callback endpoint
+  if (installationId && setupAction) {
+    console.log("   Detected installation callback, redirecting to installation endpoint");
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:4002";
+    return NextResponse.redirect(`${baseUrl}/?installation=success`);
+  }
 
   if (!code) {
     return NextResponse.json({ error: "Missing code parameter" }, { status: 400 });
@@ -87,9 +102,13 @@ export async function GET(req: Request) {
     return response;
     
   } catch (err: any) {
-    console.error("GitHub OAuth error:", err);
+    console.error("❌ GitHub OAuth error:", err);
+    console.error("   Error name:", err.name);
+    console.error("   Error message:", err.message);
+    console.error("   Error stack:", err.stack);
+    
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:4002";
-    return NextResponse.redirect(`${baseUrl}?error=auth_failed`);
+    return NextResponse.redirect(`${baseUrl}?error=auth_failed&message=${encodeURIComponent(err.message)}`);
   }
 }
 

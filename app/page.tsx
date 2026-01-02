@@ -11,13 +11,15 @@ function ErrorHandler({ setStatus }: { setStatus: (status: string) => void }) {
     const error = searchParams?.get("error");
     const emailParam = searchParams?.get("email");
     const installation = searchParams?.get("installation");
+    const errorMessage = searchParams?.get("message");
     
     if (installation === "success") {
       setStatus("🎉 GitHub App installed successfully! Now sign in with GitHub to access your dashboard.");
     } else if (error === "not_approved" && emailParam) {
       setStatus(`❌ Your access request (${emailParam}) is pending admin approval. Please wait for approval before signing in.`);
     } else if (error === "auth_failed") {
-      setStatus("❌ GitHub authentication failed. Please try again.");
+      const message = errorMessage ? ` (${decodeURIComponent(errorMessage)})` : "";
+      setStatus(`❌ GitHub authentication failed${message}. Please try again.`);
     } else if (error === "unauthorized") {
       setStatus("❌ Please sign in to access that page.");
     }
