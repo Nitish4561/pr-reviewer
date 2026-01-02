@@ -42,20 +42,30 @@ export default function DashboardPage() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("installation") === "success") {
       setInstallationSuccess(true);
+      setIsInstalled(true); // Mark as installed
       // Remove the query param
       window.history.replaceState({}, "", "/dashboard");
+      // Recheck after a short delay to get actual data
+      setTimeout(() => checkInstallation(), 1000);
     }
   }, []);
 
   async function checkInstallation() {
     try {
+      console.log("🔍 Checking installation status...");
       const res = await fetch("/api/installations");
       if (res.ok) {
         const data = await res.json();
-        setIsInstalled(!!data.installation);
+        console.log("   Installation data:", data);
+        setIsInstalled(data.installed === true);
+        console.log(`   Is installed: ${data.installed === true}`);
+      } else {
+        console.log("   ❌ Failed to fetch installation status");
+        setIsInstalled(false);
       }
     } catch (err) {
       console.error("Failed to check installation:", err);
+      setIsInstalled(false);
     }
   }
 
