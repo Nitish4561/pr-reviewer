@@ -73,8 +73,17 @@ export async function GET(req: Request) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:4002";
     
     // Redirect based on role
-    const redirectPath = user.role === "admin" ? "/admin" : "/dashboard";
-    return NextResponse.redirect(`${baseUrl}${redirectPath}`);
+    if (user.role === "admin") {
+      // Admins go to admin dashboard
+      return NextResponse.redirect(`${baseUrl}/admin`);
+    } else {
+      // Regular users go to GitHub App installation page
+      const appSlug = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG || "nirikshanai";
+      const githubAppUrl = `https://github.com/apps/${appSlug}/installations/new`;
+      
+      console.log(`🔗 Redirecting user to GitHub App installation: ${githubAppUrl}`);
+      return NextResponse.redirect(githubAppUrl);
+    }
     
   } catch (err: any) {
     console.error("GitHub OAuth error:", err);
