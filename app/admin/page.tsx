@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import ThemeToggle from "@/components/ThemeToggle";
+import Modal from "@/components/Modal";
 
 interface AccessRequest {
   id: string;
@@ -28,6 +30,19 @@ export default function AdminPage() {
   const [whitelist, setWhitelist] = useState<WhitelistedUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected" | "revoked">("pending");
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "info" | "success" | "warning" | "danger";
+    onConfirm?: () => void;
+    showCancel?: boolean;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -125,12 +140,15 @@ export default function AdminPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-          <h1 className="text-2xl font-bold mb-6">Admin Access</h1>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
+        <div className="fixed top-6 right-6">
+          <ThemeToggle />
+        </div>
+        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
+          <h1 className="text-2xl font-bold dark:text-white mb-6">Admin Access</h1>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Admin Email
               </label>
               <input
@@ -140,7 +158,7 @@ export default function AdminPage() {
                 onChange={(e) => setAdminEmail(e.target.value)}
                 required
                 placeholder="admin@example.com"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <button
@@ -165,19 +183,21 @@ export default function AdminPage() {
   const revokedCount = requests.filter((r) => r.status === "revoked").length;
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">🛡️ Admin Dashboard</h1>
-          <p className="text-gray-600 mt-1">Logged in as: {adminEmail}</p>
-        </div>
-        <div className="flex gap-4 items-center">
-          <button
-            onClick={() => setIsAuthenticated(false)}
-            className="text-sm text-gray-600 hover:text-gray-900"
-          >
-            Logout
-          </button>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold dark:text-white">🛡️ Admin Dashboard</h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">Logged in as: {adminEmail}</p>
+          </div>
+          <div className="flex gap-4 items-center">
+            <ThemeToggle />
+            <button
+              onClick={() => setIsAuthenticated(false)}
+              className="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+            >
+              Logout
+            </button>
           <a
             href="/"
             className="text-sm text-gray-600 hover:text-gray-900"
@@ -380,6 +400,7 @@ export default function AdminPage() {
         >
           🔄 Refresh Data
         </button>
+      </div>
       </div>
     </div>
   );
