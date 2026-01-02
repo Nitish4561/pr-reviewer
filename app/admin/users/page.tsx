@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Modal from "@/components/Modal";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface User {
   id: string;
@@ -18,10 +20,37 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "admin" | "user" | "suspended">("all");
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "info" | "success" | "warning" | "danger";
+    onConfirm?: () => void;
+    showCancel?: boolean;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
 
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const showModal = (
+    title: string,
+    message: string,
+    type: "info" | "success" | "warning" | "danger",
+    onConfirm?: () => void,
+    showCancel: boolean = false
+  ) => {
+    setModal({ isOpen: true, title, message, type, onConfirm, showCancel });
+  };
+
+  const closeModal = () => {
+    setModal({ ...modal, isOpen: false });
+  };
 
   async function fetchUsers() {
     try {
@@ -44,7 +73,18 @@ export default function AdminUsersPage() {
   }
 
   async function updateUserRole(userId: string, role: "admin" | "user") {
-    if (!confirm(`Change user role to ${role}?`)) return;
+    showModal(
+      "Change User Role",
+      `Change user role to ${role}?`,
+      "warning",
+      async () => {
+        await executeRoleUpdate(userId, role);
+      },
+      true
+    );
+  }
+
+  async function executeRoleUpdate(userId: string, role: "admin" | "user") {
 
     try {
       const res = await fetch(`/api/admin/users/${userId}`, {
@@ -54,20 +94,31 @@ export default function AdminUsersPage() {
       });
 
       if (res.ok) {
-        alert(`✅ User role updated to ${role}`);
+        showModal("Success", `User role updated to ${role}`, "success");
         await fetchUsers();
       } else {
         const data = await res.json();
-        alert(`❌ ${data.error || "Failed to update role"}`);
+        showModal("Error", data.error || "Failed to update role", "danger");
       }
     } catch (err) {
       console.error("Failed to update role:", err);
-      alert("❌ Failed to update user role");
+      showModal("Error", "Failed to update user role", "danger");
     }
   }
 
   async function suspendUser(userId: string) {
-    if (!confirm("Suspend this user? They won't be able to access the app.")) return;
+    showModal(
+      "Suspend User",
+      "Suspend this user? They won't be able to access the app.",
+      "danger",
+      async () => {
+        await executeSuspend(userId);
+      },
+      true
+    );
+  }
+
+  async function executeSuspend(userId: string) {
 
     try {
       const res = await fetch(`/api/admin/users/${userId}`, {
@@ -75,21 +126,31 @@ export default function AdminUsersPage() {
       });
 
       if (res.ok) {
-        alert("✅ User suspended successfully");
+        showModal("Success", "User suspended successfully", "success");
         await fetchUsers();
       } else {
         const data = await res.json();
-        alert(`❌ ${data.error || "Failed to suspend user"}`);
+        showModal("Error", data.error || "Failed to suspend user", "danger");
       }
     } catch (err) {
       console.error("Failed to suspend user:", err);
-      alert("❌ Failed to suspend user");
+      showModal("Error", "Failed to suspend user", "danger");
     }
   }
 
   async function reactivateUser(userId: string) {
-    if (!confirm("Reactivate this user?")) return;
+    showModal(
+      "Reactivate User",
+      "Reactivate this user?",
+      "success",
+      async () => {
+        await executeReactivate(userId);
+      },
+      true
+    );
+  }
 
+  async function executeReactivate(userId: string) {
     try {
       const res = await fetch(`/api/admin/users/${userId}`, {
         method: "PATCH",
@@ -98,15 +159,15 @@ export default function AdminUsersPage() {
       });
 
       if (res.ok) {
-        alert("✅ User reactivated successfully");
+        showModal("Success", "User reactivated successfully", "success");
         await fetchUsers();
       } else {
         const data = await res.json();
-        alert(`❌ ${data.error || "Failed to reactivate user"}`);
+        showModal("Error", data.error || "Failed to reactivate user", "danger");
       }
     } catch (err) {
       console.error("Failed to reactivate user:", err);
-      alert("❌ Failed to reactivate user");
+      showModal("Error", "Failed to reactivate user", "danger");
     }
   }
 
@@ -124,12 +185,25 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-12 space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">👥 User Management</h1>
-          <p className="mt-1 text-gray-600">Manage user roles and access</p>
-        </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={closeModal}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        onConfirm={modal.onConfirm}
+        showCancel={modal.showCancel}
+      />
+      
+      <div className="mx-auto max-w-7xl px-6 py-12 space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold dark:text-white">👥 User Management</h1>
+            <p className="mt-1 text-gray-600 dark:text-gray-300">Manage user roles and access</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
         <a
           href="/admin"
           className="text-sm text-gray-600 hover:text-gray-900"
@@ -271,10 +345,11 @@ export default function AdminUsersPage() {
       <div className="text-center">
         <button
           onClick={fetchUsers}
-          className="px-6 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm"
+          className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-sm dark:text-gray-300"
         >
           🔄 Refresh
         </button>
+      </div>
       </div>
     </div>
   );

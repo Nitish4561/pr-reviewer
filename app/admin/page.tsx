@@ -78,9 +78,33 @@ export default function AdminPage() {
     }
   }
 
-  async function handleUpdateStatus(requestId: string, status: "approved" | "rejected") {
-    if (!confirm(`Are you sure you want to ${status} this request?`)) return;
+  const showModal = (
+    title: string,
+    message: string,
+    type: "info" | "success" | "warning" | "danger",
+    onConfirm?: () => void,
+    showCancel: boolean = false
+  ) => {
+    setModal({ isOpen: true, title, message, type, onConfirm, showCancel });
+  };
 
+  const closeModal = () => {
+    setModal({ ...modal, isOpen: false });
+  };
+
+  async function handleUpdateStatus(requestId: string, status: "approved" | "rejected") {
+    showModal(
+      `${status === "approved" ? "Approve" : "Reject"} Request`,
+      `Are you sure you want to ${status} this request?`,
+      status === "approved" ? "success" : "warning",
+      async () => {
+        await executeUpdateStatus(requestId, status);
+      },
+      true
+    );
+  }
+
+  async function executeUpdateStatus(requestId: string, status: "approved" | "rejected") {
     try {
       const res = await fetch(`/api/access-request/${requestId}`, {
         method: "PATCH",
@@ -94,48 +118,57 @@ export default function AdminPage() {
       const data = await res.json();
 
       if (res.ok) {
-        alert(`✅ Request ${status} successfully!${status === "approved" ? "\n\nNext: Send the user the installation link." : ""}`);
+        const message = status === "approved" 
+          ? "Request approved successfully!\n\nNext: Send the user the installation link."
+          : "Request rejected successfully!";
+        showModal("Success", message, "success");
         await fetchData(); // Refresh the list
       } else {
         // Handle 404 specifically
         if (res.status === 404) {
-          alert("❌ " + data.error + "\n\nRefreshing the page...");
+          showModal("Error", data.error + "\n\nRefreshing the page...", "danger");
           await fetchData();
         } else {
-          alert("❌ " + (data.error || "Failed to update request"));
+          showModal("Error", data.error || "Failed to update request", "danger");
         }
       }
     } catch (err) {
       console.error("Failed to update:", err);
-      alert("❌ Failed to update request. Please try again.");
+      showModal("Error", "Failed to update request. Please try again.", "danger");
     }
   }
 
   async function handleRevokeAccess(email: string) {
-    if (!confirm(`⚠️ Revoke access for ${email}?\n\nThis will remove them from the whitelist and they won't be able to sign in.`)) return;
+    showModal(
+      "Revoke Access",
+      `⚠️ Revoke access for ${email}?\n\nThis will remove them from the whitelist and they won't be able to sign in.`,
+      "danger",
+      async () => {
+        try {
+          const res = await fetch("/api/admin/revoke-access", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email,
+              revokedBy: adminEmail,
+            }),
+          });
 
-    try {
-      const res = await fetch("/api/admin/revoke-access", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          revokedBy: adminEmail,
-        }),
-      });
+          const data = await res.json();
 
-      const data = await res.json();
-
-      if (res.ok) {
-        alert(`✅ Access revoked for ${email}`);
-        await fetchData(); // Refresh the list
-      } else {
-        alert("❌ " + (data.error || "Failed to revoke access"));
-      }
-    } catch (err) {
-      console.error("Failed to revoke:", err);
-      alert("❌ Failed to revoke access. Please try again.");
-    }
+          if (res.ok) {
+            showModal("Success", `Access revoked for ${email}`, "success");
+            await fetchData(); // Refresh the list
+          } else {
+            showModal("Error", data.error || "Failed to revoke access", "danger");
+          }
+        } catch (err) {
+          console.error("Failed to revoke:", err);
+          showModal("Error", "Failed to revoke access. Please try again.", "danger");
+        }
+      },
+      true
+    );
   }
 
   if (!isAuthenticated) {
@@ -184,7 +217,17 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
-    <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={closeModal}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        onConfirm={modal.onConfirm}
+        showCancel={modal.showCancel}
+      />
+      
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
       <div className="flex items-center justify-between">
         <div>
             <h1 className="text-3xl font-bold dark:text-white">🛡️ Admin Dashboard</h1>
@@ -320,11 +363,16 @@ export default function AdminPage() {
                         Reject
                       </button>
                       <button
-                        onClick={async () => {
-                          if (confirm("Delete this request? The user can re-request after.")) {
-                            // Just reject it for now
-                            await handleUpdateStatus(req.id, "rejected");
-                          }
+                        onClick={() => {
+                          showModal(
+                            "Delete Request",
+                            "Delete this request? The user can re-request after.",
+                            "warning",
+                            async () => {
+                              await handleUpdateStatus(req.id, "rejected");
+                            },
+                            true
+                          );
                         }}
                         className="px-4 py-2 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700"
                       >
