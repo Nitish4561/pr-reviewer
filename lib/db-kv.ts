@@ -445,7 +445,28 @@ export const kvdb = {
       }
 
       try {
-        const id = `review_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const redis = await getRedisClient();
+        
+        // Create a unique key for this PR (to avoid duplicates)
+        const prKey = `${owner}/${repo}#${prNumber}`;
+        
+        // Check if a review already exists for this PR
+        const existingId = await redis.get(`pr_review_key:${prKey}`) as string | null;
+        
+        let id: string;
+        let isUpdate = false;
+        
+        if (existingId) {
+          // Update existing review
+          id = existingId;
+          isUpdate = true;
+          console.log(`🔄 Updating existing review for ${prKey}`);
+        } else {
+          // Create new review
+          id = `review_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          console.log(`✨ Creating new review for ${prKey}`);
+        }
+        
         const review = {
           id,
           owner,
@@ -456,12 +477,14 @@ export const kvdb = {
           issuesFound,
           hasHighSeverity,
           reviewedAt: new Date().toISOString(),
+          ...(isUpdate && { updatedAt: new Date().toISOString() }),
         };
 
-        const redis = await getRedisClient();
-        
         // Store the review
         await redis.set(`pr_review:${id}`, JSON.stringify(review));
+        
+        // Store the PR key mapping (for deduplication)
+        await redis.set(`pr_review_key:${prKey}`, id);
         
         // Add to user's reviews set (indexed by reviewedBy)
         await redis.sAdd(`pr_reviews:user:${reviewedBy}`, id);
@@ -469,7 +492,7 @@ export const kvdb = {
         // Add to all reviews set
         await redis.sAdd("pr_reviews:all", id);
         
-        console.log(`✅ PR review saved: ${owner}/${repo}#${prNumber} for ${reviewedBy}`);
+        console.log(`✅ PR review ${isUpdate ? 'updated' : 'saved'}: ${prKey} (${issuesFound} issues, critical: ${hasHighSeverity})`);
         
         return review;
       } catch (err: any) {
