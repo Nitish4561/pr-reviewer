@@ -67,13 +67,13 @@ export default function AdminPage() {
         return true; // Success
       } else {
         // Show error and prevent login
-        alert(data.error || "Failed to fetch data");
+        showModal("Error", data.error || "Failed to fetch data", "danger");
         setIsAuthenticated(false);
         return false; // Failed
       }
     } catch (err) {
       console.error("Failed to fetch:", err);
-      alert("Failed to fetch access requests");
+      showModal("Error", "Failed to fetch access requests", "danger");
       return false; // Failed
     }
   }
