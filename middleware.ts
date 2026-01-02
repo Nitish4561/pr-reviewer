@@ -12,7 +12,7 @@ import type { NextRequest } from "next/server";
 const protectedRoutes = ["/dashboard", "/settings"];
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
 
   // Get session from cookie
   const sessionCookie = request.cookies.get("nirikshan_session");
@@ -22,9 +22,22 @@ export function middleware(request: NextRequest) {
     pathname.startsWith(route)
   );
 
+  // Check if this is an installation callback with success parameter
+  const isInstallationSuccess = searchParams.get("installation") === "success";
+
   console.log(`🔒 Middleware check for: ${pathname}`);
   console.log(`   Protected route: ${isProtectedRoute}`);
   console.log(`   Has session cookie: ${!!sessionCookie}`);
+  console.log(`   Installation success: ${isInstallationSuccess}`);
+
+  // Allow dashboard access without session if installation just succeeded
+  // This handles the case where session expired during GitHub App installation
+  if (!sessionCookie && isProtectedRoute && isInstallationSuccess) {
+    console.log(`📦 Installation success detected, redirecting to homepage with message`);
+    const url = new URL("/", request.url);
+    url.searchParams.set("installation", "success");
+    return NextResponse.redirect(url);
+  }
 
   // Only block dashboard/settings if no OAuth session
   // /admin has its own email-based auth system
