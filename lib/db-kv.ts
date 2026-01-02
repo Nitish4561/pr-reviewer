@@ -288,6 +288,38 @@ export const kvdb = {
         throw err;
       }
     },
+
+    async delete(id: string) {
+      if (!isKVConfigured) return;
+      
+      try {
+        console.log(`🗑️ Deleting access request ${id}`);
+        
+        const redis = await getRedisClient();
+        
+        // Get the request first to find the email
+        const data = await redis.get(`access_request:${id}`);
+        
+        if (data) {
+          const request = typeof data === 'string' ? JSON.parse(data) : data;
+          
+          // Delete the email mapping
+          await redis.del(`access_request_email:${request.email.toLowerCase()}`);
+          console.log(`   ✅ Deleted email mapping`);
+        }
+        
+        // Delete the request itself
+        await redis.del(`access_request:${id}`);
+        
+        // Remove from the set of all requests
+        await redis.sRem("access_requests:all", id);
+        
+        console.log(`✅ Access request ${id} deleted`);
+      } catch (err: any) {
+        console.error("❌ Error deleting access request:", err.message);
+        throw err;
+      }
+    },
   },
 
   whitelist: {

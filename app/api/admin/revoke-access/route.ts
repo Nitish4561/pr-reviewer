@@ -41,15 +41,11 @@ export async function POST(req: Request) {
     await kvdb.whitelist.remove(email);
     console.log(`   ✅ Removed from whitelist`);
 
-    // Step 2: Find and update their access request to "revoked"
+    // Step 2: Find and delete their access request
     const accessRequest = await kvdb.accessRequest.findByEmail(email);
     if (accessRequest) {
-      await kvdb.accessRequest.updateStatus({
-        id: accessRequest.id,
-        status: "revoked",
-        reviewedBy: revokedBy,
-      });
-      console.log(`   ✅ Access request marked as revoked`);
+      await kvdb.accessRequest.delete(accessRequest.id);
+      console.log(`   ✅ Access request deleted`);
     } else {
       console.log(`   ℹ️ No access request found for this email`);
     }
