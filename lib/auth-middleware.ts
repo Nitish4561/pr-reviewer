@@ -191,18 +191,21 @@ export async function handleGitHubLogin(githubUser: {
   let user = await userDb.findByEmail(email);
 
   if (!user) {
-    // Create new user
-    const isFirstUser = (await userDb.getAll()).length === 0;
+    // Check if this email is in the admin list
+    const adminEmails = (process.env.ADMIN_EMAILS || "")
+      .split(",")
+      .map((e) => e.trim().toLowerCase());
+    const isAdmin = adminEmails.includes(email.toLowerCase());
 
     user = await userDb.create({
       email,
       githubId: githubUser.id,
       githubUsername: githubUser.login,
-      role: isFirstUser ? "admin" : "user", // First user is admin
+      role: isAdmin ? "admin" : "user",
     });
 
     console.log(
-      `✅ New user created: ${email} (${isFirstUser ? "ADMIN" : "USER"})`
+      `✅ New user created: ${email} (${isAdmin ? "ADMIN" : "USER"})`
     );
   } else {
     // Update existing user
