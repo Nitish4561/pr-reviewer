@@ -4,7 +4,8 @@ import { kvdb } from "@/lib/db-kv";
 
 /**
  * GET /api/user/openai-usage
- * Get OpenAI API usage and balance information
+ * Validate OpenAI API key and check if it's working
+ * Note: OpenAI doesn't provide programmatic access to billing data
  */
 export async function GET() {
   try {
@@ -14,7 +15,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log(`📊 Fetching OpenAI usage for user: ${session.email}`);
+    console.log(`🔑 Validating OpenAI key for user: ${session.email}`);
 
     // Get user's installations to find their OpenAI key
     const installations = await kvdb.installation.getAll();
@@ -32,80 +33,76 @@ export async function GET() {
     const openaiKey = userInstallation.openaiKey;
 
     try {
-      // Fetch current billing usage for the current month
-      const today = new Date();
-      const startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-      const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      // Validate the API key by making a lightweight API call
+      console.log("📡 Testing OpenAI API key validity...");
+      
+      const modelsResponse = await fetch("https://api.openai.com/v1/models", {
+        headers: {
+          "Authorization": `Bearer ${openaiKey}`,
+        },
+      });
 
-      const usageResponse = await fetch(
-        `https://api.openai.com/v1/usage?start_date=${startDate.toISOString().split('T')[0]}&end_date=${endDate.toISOString().split('T')[0]}`,
-        {
-          headers: {
-            "Authorization": `Bearer ${openaiKey}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (!usageResponse.ok) {
-        console.error(`❌ OpenAI API error: ${usageResponse.status}`);
+      if (!modelsResponse.ok) {
+        console.error(`❌ OpenAI API key validation failed: ${modelsResponse.status}`);
         
-        // Try to check if key is at least valid with a simple model list call
-        const modelsResponse = await fetch("https://api.openai.com/v1/models", {
+        if (modelsResponse.status === 401) {
+          return NextResponse.json({
+            configured: true,
+            valid: false,
+            error: "Invalid API key",
+            message: "The API key appears to be invalid or expired",
+          }, { status: 200 });
+        }
+        
+        return NextResponse.json({
+          configured: true,
+          valid: false,
+          error: "API key validation failed",
+          message: `OpenAI API returned status ${modelsResponse.status}`,
+        }, { status: 200 });
+      }
+
+      const modelsData = await modelsResponse.json();
+      const modelCount = modelsData.data?.length || 0;
+
+      console.log(`✅ OpenAI API key is valid (${modelCount} models available)`);
+
+      // Try to get account information if available
+      let organizationInfo = null;
+      try {
+        // This might not work for all keys, but we'll try
+        const orgResponse = await fetch("https://api.openai.com/v1/organizations", {
           headers: {
             "Authorization": `Bearer ${openaiKey}`,
           },
         });
-
-        if (modelsResponse.ok) {
-          return NextResponse.json({
-            configured: true,
-            valid: true,
-            usage: null,
-            message: "API key is valid but usage data unavailable",
-          });
+        
+        if (orgResponse.ok) {
+          organizationInfo = await orgResponse.json();
         }
-
-        return NextResponse.json({
-          error: "Invalid or expired API key",
-          configured: true,
-          valid: false,
-        }, { status: 400 });
+      } catch (err) {
+        // Silently fail - organization endpoint might not be available
+        console.log("⚠️ Organization endpoint not accessible");
       }
-
-      const usageData = await usageResponse.json();
-
-      // Calculate total cost from daily usage
-      let totalCost = 0;
-      if (usageData.data && Array.isArray(usageData.data)) {
-        totalCost = usageData.data.reduce((sum: number, day: any) => {
-          return sum + (day.aggregated_cost || 0);
-        }, 0);
-      }
-
-      console.log(`✅ OpenAI usage retrieved: $${totalCost.toFixed(4)} this month`);
 
       return NextResponse.json({
         configured: true,
         valid: true,
-        usage: {
-          totalCost: totalCost,
-          currency: "USD",
-          period: "current_month",
-          startDate: startDate.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0],
-          dailyData: usageData.data || [],
-        },
+        keyPrefix: openaiKey.substring(0, 7) + "...",
+        modelCount: modelCount,
+        organization: organizationInfo,
+        message: "API key is valid and working",
+        billingNote: "OpenAI doesn't provide programmatic access to billing data. Please check your usage on the OpenAI dashboard.",
       });
     } catch (apiError: any) {
-      console.error("❌ Error fetching OpenAI usage:", apiError);
+      console.error("❌ Error validating OpenAI key:", apiError);
       
       return NextResponse.json({
         configured: true,
         valid: false,
-        error: "Failed to fetch usage data",
+        error: "Failed to validate API key",
         message: apiError.message,
-      }, { status: 500 });
+      }, { status: 200 });
     }
   } catch (err: any) {
     console.error("❌ Error in openai-usage endpoint:", err);
