@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { userDb, type User } from "./db-enhanced";
+import { kvdb } from "./db-kv";
 
 /**
  * Enhanced Authentication & Authorization Middleware
@@ -9,6 +9,19 @@ import { userDb, type User } from "./db-enhanced";
 // ============================================
 // Session Management
 // ============================================
+
+export interface User {
+  id: string;
+  email: string;
+  githubUsername?: string;
+  githubId?: string;
+  role: "admin" | "user";
+  status: "active" | "suspended";
+  openaiKey?: string;
+  createdAt: string;
+  updatedAt: string;
+  lastLoginAt?: string;
+}
 
 export interface SessionData {
   userId: string;
@@ -32,7 +45,7 @@ export async function getSession(): Promise<SessionData | null> {
     const session = JSON.parse(sessionCookie.value) as SessionData;
     
     // Validate session by checking if user still exists and is active
-    const user = await userDb.findById(session.userId);
+    const user = await kvdb.user.findById(session.userId);
     
     if (!user || user.status !== "active") {
       return null;
@@ -52,7 +65,7 @@ export async function getCurrentUser(): Promise<User | null> {
   const session = await getSession();
   if (!session) return null;
 
-  return userDb.findById(session.userId);
+  return kvdb.user.findById(session.userId);
 }
 
 /**
@@ -82,7 +95,7 @@ export async function createSession(user: User): Promise<void> {
     console.log(`✅ Session cookie set successfully`);
 
     // Update last login (non-blocking, don't await to avoid delays)
-    userDb.updateLastLogin(user.id).catch((err) => {
+    kvdb.user.updateLastLogin(user.id).catch((err) => {
       console.error("Failed to update last login:", err);
     });
   } catch (error) {
@@ -198,8 +211,10 @@ export async function handleGitHubLogin(githubUser: {
 }): Promise<User> {
   const email = githubUser.email || `${githubUser.login}@github.user`;
 
+  console.log(`👤 Looking up user: ${email}`);
+
   // Check if user exists
-  let user = await userDb.findByEmail(email);
+  let user = await kvdb.user.findByEmail(email);
 
   if (!user) {
     // Check if this email is in the admin list
@@ -208,7 +223,9 @@ export async function handleGitHubLogin(githubUser: {
       .map((e) => e.trim().toLowerCase());
     const isAdmin = adminEmails.includes(email.toLowerCase());
 
-    user = await userDb.create({
+    console.log(`🆕 Creating new user: ${email} (${isAdmin ? "ADMIN" : "USER"})`);
+
+    user = await kvdb.user.create({
       email,
       githubId: githubUser.id,
       githubUsername: githubUser.login,
@@ -219,11 +236,13 @@ export async function handleGitHubLogin(githubUser: {
       `✅ New user created: ${email} (${isAdmin ? "ADMIN" : "USER"})`
     );
   } else {
+    console.log(`♻️  Updating existing user: ${email}`);
     // Update existing user
-    user = await userDb.update(user.id, {
+    user = await kvdb.user.update(user.id, {
       githubUsername: githubUser.login,
       githubId: githubUser.id,
     });
+    console.log(`✅ User updated: ${email}`);
   }
 
   return user;

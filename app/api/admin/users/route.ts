@@ -4,7 +4,7 @@ import {
   unauthorizedResponse,
   successResponse,
 } from "@/lib/auth-middleware";
-import { userDb } from "@/lib/db-enhanced";
+import { kvdb } from "@/lib/db-kv";
 
 /**
  * GET /api/admin/users
@@ -14,10 +14,10 @@ export async function GET() {
   try {
     await requireAdmin();
 
-    const users = await userDb.getAll();
+    const users = await kvdb.user.getAll();
 
     return successResponse({
-      users: users.map((u) => ({
+      users: users.map((u: any) => ({
         id: u.id,
         email: u.email,
         githubUsername: u.githubUsername,
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     }
 
     // Check if user already exists
-    const existing = await userDb.findByEmail(email);
+    const existing = await kvdb.user.findByEmail(email);
     if (existing) {
       return NextResponse.json(
         { error: "User already exists" },
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const user = await userDb.create({
+    const user = await kvdb.user.create({
       email,
       githubUsername,
       role: role || "user",

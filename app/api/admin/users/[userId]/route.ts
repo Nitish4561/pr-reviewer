@@ -4,7 +4,7 @@ import {
   unauthorizedResponse,
   successResponse,
 } from "@/lib/auth-middleware";
-import { userDb } from "@/lib/db-enhanced";
+import { kvdb } from "@/lib/db-kv";
 
 /**
  * PATCH /api/admin/users/[userId]
@@ -21,7 +21,7 @@ export async function PATCH(
     const { role, status } = body;
 
     // Find the user
-    const user = await userDb.findById(userId);
+    const user = await kvdb.user.findById(userId);
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -39,7 +39,7 @@ export async function PATCH(
     if (role) updates.role = role;
     if (status) updates.status = status;
 
-    const updated = await userDb.update(userId, updates);
+    const updated = await kvdb.user.update(userId, updates);
 
     console.log(`✅ Admin ${admin.email} updated user ${user.email}:`, updates);
 
@@ -62,7 +62,7 @@ export async function DELETE(
     const { userId } = await params;
 
     // Find the user
-    const user = await userDb.findById(userId);
+    const user = await kvdb.user.findById(userId);
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -76,7 +76,7 @@ export async function DELETE(
     }
 
     // Suspend the user
-    const updated = await userDb.updateStatus(userId, "suspended");
+    const updated = await kvdb.user.update(userId, { status: "suspended" });
 
     console.log(`✅ Admin ${admin.email} suspended user ${user.email}`);
 

@@ -575,5 +575,134 @@ export const kvdb = {
       }
     },
   },
+
+  // ============================================
+  // User Management Operations
+  // ============================================
+  user: {
+    async create(data: {
+      email: string;
+      githubUsername?: string;
+      githubId?: string;
+      role?: "admin" | "user";
+      openaiKey?: string;
+    }) {
+      const id = data.githubId || data.email;
+      const user = {
+        id,
+        email: data.email.toLowerCase(),
+        githubUsername: data.githubUsername,
+        githubId: data.githubId,
+        role: data.role || "user",
+        status: "active",
+        openaiKey: data.openaiKey,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      try {
+        const redis = await getRedisClient();
+        await redis.set(`user:${id}`, JSON.stringify(user));
+        await redis.set(`user:email:${user.email}`, id);
+        await redis.sAdd("users:all", id);
+        
+        console.log(`✅ User created in Redis: ${user.email} (${user.role})`);
+        return user;
+      } catch (err: any) {
+        console.error("❌ Error creating user:", err.message);
+        throw err;
+      }
+    },
+
+    async findById(id: string) {
+      if (!isKVConfigured) return null;
+      
+      try {
+        const redis = await getRedisClient();
+        const data = await redis.get(`user:${id}`);
+        if (!data) return null;
+        
+        return typeof data === 'string' ? JSON.parse(data) : data;
+      } catch (err: any) {
+        console.error("❌ Error finding user by ID:", err.message);
+        return null;
+      }
+    },
+
+    async findByEmail(email: string) {
+      if (!isKVConfigured) return null;
+      
+      try {
+        const normalized = email.toLowerCase();
+        const redis = await getRedisClient();
+        
+        const userId = await redis.get(`user:email:${normalized}`);
+        if (!userId) return null;
+        
+        return this.findById(typeof userId === 'string' ? userId : userId.toString());
+      } catch (err: any) {
+        console.error("❌ Error finding user by email:", err.message);
+        return null;
+      }
+    },
+
+    async update(id: string, data: any) {
+      if (!isKVConfigured) throw new Error("Redis not configured");
+      
+      try {
+        const redis = await getRedisClient();
+        const existing = await this.findById(id);
+        
+        if (!existing) {
+          throw new Error("User not found");
+        }
+
+        const updated = {
+          ...existing,
+          ...data,
+          updatedAt: new Date().toISOString(),
+        };
+
+        await redis.set(`user:${id}`, JSON.stringify(updated));
+        
+        // Update email index if email changed
+        if (data.email && data.email !== existing.email) {
+          await redis.set(`user:email:${data.email.toLowerCase()}`, id);
+        }
+        
+        console.log(`✅ User updated in Redis: ${id}`);
+        return updated;
+      } catch (err: any) {
+        console.error("❌ Error updating user:", err.message);
+        throw err;
+      }
+    },
+
+    async getAll() {
+      if (!isKVConfigured) return [];
+      
+      try {
+        const redis = await getRedisClient();
+        const userIds = await redis.sMembers("users:all") as string[];
+        const users = [];
+
+        for (const id of userIds) {
+          const user = await this.findById(id);
+          if (user) users.push(user);
+        }
+
+        return users.sort((a: any, b: any) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      } catch (err: any) {
+        console.error("❌ Error getting all users:", err.message);
+        return [];
+      }
+    },
+
+    async updateLastLogin(id: string) {
+      return this.update(id, { lastLoginAt: new Date().toISOString() });
+    },
+  },
 };
 

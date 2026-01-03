@@ -4,7 +4,7 @@ import {
   unauthorizedResponse,
   successResponse,
 } from "@/lib/auth-middleware";
-import { prReviewDb } from "@/lib/db-enhanced";
+import { kvdb } from "@/lib/db-kv";
 
 /**
  * GET /api/admin/reviews
@@ -16,8 +16,9 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get("limit") || "50");
 
-    const reviews = await prReviewDb.getAll(limit);
-    const stats = await prReviewDb.getStats();
+    // For admin, pass empty string to get all reviews
+    const reviews = await kvdb.prReview.getByUser("", limit);
+    const stats = await kvdb.prReview.getStats("");
 
     return successResponse({ reviews, stats });
   } catch (err: any) {
