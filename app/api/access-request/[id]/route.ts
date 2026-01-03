@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { kvdb } from "@/lib/db-kv";
-import { sendApprovalEmail } from "@/lib/email";
+import { sendAccessApprovedEmail, sendAccessRejectedEmail } from "@/lib/email";
 
 /**
  * Check if email is an admin
@@ -55,30 +55,41 @@ export async function PATCH(
       reviewedBy,
     });
 
-    // Send approval email if status is approved
+    // Send email notification to user (non-blocking)
     if (status === "approved") {
-      try {
-        const appSlug = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG || "nirikshanai";
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:4002";
-        
-        await sendApprovalEmail({
-          to: updated.email,
-          name: updated.name,
-          installationLink: `https://github.com/apps/${appSlug}/installations/new`,
-          dashboardLink: `${baseUrl}/dashboard`,
-        });
-        
-        console.log(`✅ Approval email sent to ${updated.email}`);
-      } catch (emailError) {
-        console.error("Failed to send approval email:", emailError);
-        // Don't fail the request if email fails
-      }
+      sendAccessApprovedEmail({
+        name: updated.name,
+        email: updated.email,
+        githubUsername: updated.githubUsername || "user",
+      }).then(result => {
+        if (result.success) {
+          console.log(`✅ Approval email sent to ${updated.email}`);
+        } else {
+          console.warn('⚠️ Failed to send approval email:', result.error || result.message);
+        }
+      }).catch(err => {
+        console.error('❌ Error sending approval email:', err);
+      });
+    } else if (status === "rejected") {
+      sendAccessRejectedEmail({
+        name: updated.name,
+        email: updated.email,
+        githubUsername: updated.githubUsername || "user",
+      }).then(result => {
+        if (result.success) {
+          console.log(`✅ Rejection email sent to ${updated.email}`);
+        } else {
+          console.warn('⚠️ Failed to send rejection email:', result.error || result.message);
+        }
+      }).catch(err => {
+        console.error('❌ Error sending rejection email:', err);
+      });
     }
 
     return NextResponse.json({
       success: true,
       request: updated,
-      emailSent: status === "approved",
+      emailSent: true,
     });
   } catch (error: any) {
     console.error("Error updating access request:", error);

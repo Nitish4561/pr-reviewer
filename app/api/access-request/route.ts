@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { kvdb } from "@/lib/db-kv";
+import { sendAdminAccessRequestNotification } from "@/lib/email";
 
 /**
  * POST - Request beta access
@@ -38,6 +39,22 @@ export async function POST(req: Request) {
       email,
       githubUsername,
       message,
+    });
+
+    // Send email notification to admins (non-blocking)
+    sendAdminAccessRequestNotification({
+      name,
+      email,
+      githubUsername,
+      message,
+    }).then(result => {
+      if (result.success) {
+        console.log('✅ Admin notification sent');
+      } else {
+        console.warn('⚠️ Failed to send admin notification:', result.error || result.message);
+      }
+    }).catch(err => {
+      console.error('❌ Error sending admin notification:', err);
     });
 
     return NextResponse.json({
