@@ -40,6 +40,13 @@ export default function DashboardPage() {
   const [keyPreview, setKeyPreview] = useState<string | null>(null);
   const [isEditingKey, setIsEditingKey] = useState(false);
   const [username, setUsername] = useState<string>("");
+  const [openaiUsage, setOpenaiUsage] = useState<{
+    totalCost: number;
+    currency: string;
+    period: string;
+    valid: boolean;
+  } | null>(null);
+  const [loadingUsage, setLoadingUsage] = useState(false);
   const [modal, setModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -71,6 +78,13 @@ export default function DashboardPage() {
       setTimeout(() => checkInstallation(), 1000);
     }
   }, []);
+
+  // Fetch OpenAI usage when key status changes
+  useEffect(() => {
+    if (hasKey) {
+      fetchOpenAIUsage();
+    }
+  }, [hasKey]);
 
   async function fetchCurrentUser() {
     try {
@@ -118,6 +132,33 @@ export default function DashboardPage() {
     }
   }
 
+  async function fetchOpenAIUsage() {
+    if (!hasKey) return;
+    
+    setLoadingUsage(true);
+    try {
+      const res = await fetch("/api/user/openai-usage");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.configured && data.valid && data.usage) {
+          setOpenaiUsage({
+            totalCost: data.usage.totalCost,
+            currency: data.usage.currency,
+            period: data.usage.period,
+            valid: true,
+          });
+        } else {
+          setOpenaiUsage({ totalCost: 0, currency: "USD", period: "current_month", valid: false });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch OpenAI usage:", err);
+      setOpenaiUsage(null);
+    } finally {
+      setLoadingUsage(false);
+    }
+  }
+
   async function fetchReviews() {
     try {
       const res = await fetch("/api/user/reviews?limit=10");
@@ -153,6 +194,7 @@ export default function DashboardPage() {
       setSaved(true);
       setIsEditingKey(false);
       await fetchKeyStatus(); // Refresh key status
+      await fetchOpenAIUsage(); // Fetch usage for new key
     } else {
       const data = await res.json();
       setError(data.error || "Something went wrong");
@@ -516,6 +558,51 @@ export default function DashboardPage() {
             <p className="text-xs text-gray-500 dark:text-gray-400">
               ✅ OpenAI API key is configured
             </p>
+
+            {/* OpenAI Usage Information */}
+            {loadingUsage ? (
+              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 dark:border-blue-400"></div>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    Loading usage data...
+                  </p>
+                </div>
+              </div>
+            ) : openaiUsage ? (
+              <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+                      Current Month Usage
+                    </p>
+                    <p className="text-2xl font-bold text-blue-900 dark:text-blue-100 mt-1">
+                      ${openaiUsage.totalCost.toFixed(4)} {openaiUsage.currency}
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                      {openaiUsage.valid ? "✓ API key is valid" : "⚠ Unable to verify"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={fetchOpenAIUsage}
+                    className="p-2 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-md transition"
+                    title="Refresh usage"
+                  >
+                    <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
+                </div>
+                <a
+                  href="https://platform.openai.com/settings/organization/billing/overview"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  View detailed billing →
+                </a>
+              </div>
+            ) : null}
           </div>
         )}
 
