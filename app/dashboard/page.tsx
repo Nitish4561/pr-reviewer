@@ -352,9 +352,9 @@ export default function DashboardPage() {
                     <h3 className="text-lg font-medium dark:text-gray-100 mb-4">PR Status Distribution</h3>
                     <SimplePieChart
                       data={[
-                        { label: "Clean PRs", value: stats.cleanPRs, color: "#10b981" },
-                        { label: "With Issues", value: stats.totalReviews - stats.cleanPRs - stats.criticalIssues, color: "#f59e0b" },
-                        { label: "Critical", value: stats.criticalIssues, color: "#ef4444" },
+                        { label: "Clean PRs", value: stats.cleanPRs, color: "#10b981", className: "text-gray-600 dark:text-gray-300" },
+                        { label: "With Issues", value: stats.totalReviews - stats.cleanPRs - stats.criticalIssues, color: "#f59e0b", className: "text-gray-600 dark:text-gray-300" },
+                        { label: "Critical", value: stats.criticalIssues, color: "#ef4444", className: "text-gray-600 dark:text-gray-300" },
                       ]}
                     />
                   </div>
@@ -364,10 +364,10 @@ export default function DashboardPage() {
                     <h3 className="text-lg font-medium dark:text-gray-100 mb-4">Review Metrics</h3>
                     <SimpleBarChart
                       data={[
-                        { label: "Total Reviews", value: stats.totalReviews, color: "#3b82f6" },
-                        { label: "Clean PRs", value: stats.cleanPRs, color: "#10b981" },
-                        { label: "Critical Issues", value: stats.criticalIssues, color: "#ef4444" },
-                        { label: "Total Issues", value: stats.totalIssues, color: "#f59e0b" },
+                        { label: "Total Reviews", value: stats.totalReviews, color: "#3b82f6", className: "text-gray-600 dark:text-gray-300" },
+                        { label: "Clean PRs", value: stats.cleanPRs, color: "#10b981", className: "text-gray-600 dark:text-gray-300" },
+                        { label: "Critical Issues", value: stats.criticalIssues, color: "#ef4444", className: "text-gray-600 dark:text-gray-300" },
+                        { label: "Total Issues", value: stats.totalIssues, color: "#f59e0b", className: "text-gray-600 dark:text-gray-300" },
                       ]}
                     />
                   </div>
@@ -594,15 +594,6 @@ export default function DashboardPage() {
                 Uninstall NirikshanAI
               </a>
             )}
-
-            <a
-              href="https://github.com/settings/installations"
-          target="_blank"
-          rel="noopener noreferrer"
-              className="block w-full text-center rounded-md border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-            >
-              View All Installations
-            </a>
           </div>
 
           <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
