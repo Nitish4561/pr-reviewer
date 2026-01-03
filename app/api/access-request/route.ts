@@ -41,26 +41,29 @@ export async function POST(req: Request) {
       message,
     });
 
-    // Send email notification to admins (non-blocking)
-    sendAdminAccessRequestNotification({
-      name,
-      email,
-      githubUsername,
-      message,
-    }).then(result => {
-      if (result.success) {
-        console.log('✅ Admin notification sent');
-      } else {
-        console.warn('⚠️ Failed to send admin notification:', result.error || result.message);
-      }
-    }).catch(err => {
-      console.error('❌ Error sending admin notification:', err);
-    });
+    // Send email notification to admins (AWAIT to catch errors)
+    let emailResult = null;
+    try {
+      console.log(`📧 Attempting to send admin notification...`);
+      emailResult = await sendAdminAccessRequestNotification({
+        name,
+        email,
+        githubUsername,
+        message,
+      });
+      console.log(`✅ Admin email result:`, emailResult);
+    } catch (emailError: any) {
+      console.error('❌ Error sending admin notification:', emailError);
+      console.error('   Error message:', emailError.message);
+      console.error('   Error stack:', emailError.stack);
+      // Don't fail the request if email fails
+    }
 
     return NextResponse.json({
       success: true,
       message: "Access request submitted! We'll review it shortly.",
       requestId: request.id,
+      emailSent: emailResult?.success || false,
     });
   } catch (error: any) {
     console.error("Error creating access request:", error);

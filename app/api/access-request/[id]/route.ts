@@ -55,41 +55,38 @@ export async function PATCH(
       reviewedBy,
     });
 
-    // Send email notification to user (non-blocking)
-    if (status === "approved") {
-      sendAccessApprovedEmail({
-        name: updated.name,
-        email: updated.email,
-        githubUsername: updated.githubUsername || "user",
-      }).then(result => {
-        if (result.success) {
-          console.log(`✅ Approval email sent to ${updated.email}`);
-        } else {
-          console.warn('⚠️ Failed to send approval email:', result.error || result.message);
-        }
-      }).catch(err => {
-        console.error('❌ Error sending approval email:', err);
-      });
-    } else if (status === "rejected") {
-      sendAccessRejectedEmail({
-        name: updated.name,
-        email: updated.email,
-        githubUsername: updated.githubUsername || "user",
-      }).then(result => {
-        if (result.success) {
-          console.log(`✅ Rejection email sent to ${updated.email}`);
-        } else {
-          console.warn('⚠️ Failed to send rejection email:', result.error || result.message);
-        }
-      }).catch(err => {
-        console.error('❌ Error sending rejection email:', err);
-      });
+    // Send email notification to user (AWAIT to catch errors)
+    let emailResult = null;
+    try {
+      if (status === "approved") {
+        console.log(`📧 Attempting to send approval email to: ${updated.email}`);
+        emailResult = await sendAccessApprovedEmail({
+          name: updated.name,
+          email: updated.email,
+          githubUsername: updated.githubUsername || "user",
+        });
+        console.log(`✅ Approval email result:`, emailResult);
+      } else if (status === "rejected") {
+        console.log(`📧 Attempting to send rejection email to: ${updated.email}`);
+        emailResult = await sendAccessRejectedEmail({
+          name: updated.name,
+          email: updated.email,
+          githubUsername: updated.githubUsername || "user",
+        });
+        console.log(`✅ Rejection email result:`, emailResult);
+      }
+    } catch (emailError: any) {
+      console.error('❌ Email sending error:', emailError);
+      console.error('   Error message:', emailError.message);
+      console.error('   Error stack:', emailError.stack);
+      // Don't fail the request if email fails
     }
 
     return NextResponse.json({
       success: true,
       request: updated,
-      emailSent: true,
+      emailSent: emailResult?.success || false,
+      emailError: emailResult?.success ? null : (emailResult?.error || 'Unknown error'),
     });
   } catch (error: any) {
     console.error("Error updating access request:", error);
