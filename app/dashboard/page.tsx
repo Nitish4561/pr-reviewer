@@ -740,8 +740,8 @@ export default function DashboardPage() {
             ) : (
               <a
                 href={`https://github.com/apps/${process.env.NEXT_PUBLIC_GITHUB_APP_SLUG || "nirikshanai"}`}
-                target="_blank"
-                rel="noopener noreferrer"
+          target="_blank"
+          rel="noopener noreferrer"
                 className="block w-full text-center rounded-md bg-gray-900 dark:bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-indigo-700 transition"
               >
                 Uninstall NirikshanAI
@@ -794,7 +794,7 @@ sequenceDiagram
           `}
         />
       </div>
-    </div>
+      </div>
     </div>
   );
 }

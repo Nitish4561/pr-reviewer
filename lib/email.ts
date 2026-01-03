@@ -13,7 +13,18 @@ const APP_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:4002';
  * Check if email service is configured
  */
 export function isEmailConfigured(): boolean {
-  return !!(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL);
+  const isConfigured = !!process.env.RESEND_API_KEY;
+  
+  if (!isConfigured) {
+    console.warn('⚠️ RESEND_API_KEY not set');
+  } else {
+    console.log('✅ Resend configured');
+    console.log('   API Key:', process.env.RESEND_API_KEY?.substring(0, 6) + '...');
+    console.log('   From Email:', FROM_EMAIL);
+    console.log('   Admin Emails:', ADMIN_EMAILS.join(', '));
+  }
+  
+  return isConfigured;
 }
 
 /**
@@ -32,6 +43,8 @@ export async function sendAdminAccessRequestNotification(request: {
 
   try {
     console.log(`📧 Sending admin notification for access request: ${request.email}`);
+    console.log(`   To: ${ADMIN_EMAILS.join(', ')}`);
+    console.log(`   From: ${FROM_EMAIL}`);
 
     const emailPromises = ADMIN_EMAILS.map(adminEmail =>
       resend.emails.send({
@@ -115,6 +128,7 @@ export async function sendAdminAccessRequestNotification(request: {
 
     const results = await Promise.all(emailPromises);
     console.log(`✅ Admin notification sent to ${ADMIN_EMAILS.length} admin(s)`);
+    console.log(`   Message IDs:`, results.map(r => r.data?.id));
     
     return { 
       success: true, 
@@ -122,6 +136,10 @@ export async function sendAdminAccessRequestNotification(request: {
     };
   } catch (error: any) {
     console.error('❌ Failed to send admin notification:', error);
+    console.error('   Error name:', error.name);
+    console.error('   Error message:', error.message);
+    console.error('   Error statusCode:', error.statusCode);
+    console.error('   Full error:', JSON.stringify(error, null, 2));
     return { 
       success: false, 
       error: error.message 
@@ -150,12 +168,12 @@ export async function sendAccessApprovedEmail(user: {
       to: user.email,
       subject: `✅ Access Approved - Welcome to ${APP_NAME}!`,
       html: `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
               body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
               .container { max-width: 600px; margin: 0 auto; padding: 20px; }
               .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 40px; border-radius: 10px 10px 0 0; text-align: center; }
@@ -166,16 +184,16 @@ export async function sendAccessApprovedEmail(user: {
               .step { margin: 15px 0; padding-left: 35px; position: relative; }
               .step-number { position: absolute; left: 0; top: 0; background: #10b981; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; }
               .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-            </style>
-          </head>
-          <body>
+  </style>
+</head>
+<body>
             <div class="container">
-              <div class="header">
+  <div class="header">
                 <div class="success-icon">🎉</div>
                 <h1 style="margin: 0; font-size: 32px;">Access Approved!</h1>
                 <p style="margin: 10px 0 0 0; opacity: 0.9;">Welcome to ${APP_NAME}</p>
-              </div>
-              <div class="content">
+  </div>
+  <div class="content">
                 <p>Hi <strong>${user.name}</strong>,</p>
                 <p>Great news! Your access request to <strong>${APP_NAME}</strong> has been approved. You can now start using AI-powered code reviews for your pull requests.</p>
 
@@ -184,35 +202,35 @@ export async function sendAccessApprovedEmail(user: {
                     🚀 Get Started Now
                   </a>
                 </div>
-
-                <div class="steps">
+      
+      <div class="steps">
                   <h3 style="margin-top: 0; color: #10b981;">📋 Next Steps:</h3>
                   
-                  <div class="step">
+        <div class="step">
                     <div class="step-number">1</div>
                     <strong>Sign in with GitHub</strong><br>
                     <span style="color: #666; font-size: 14px;">Use your GitHub account (@${user.githubUsername}) to sign in</span>
-                  </div>
-
-                  <div class="step">
+        </div>
+        
+        <div class="step">
                     <div class="step-number">2</div>
                     <strong>Install NirikshanAI GitHub App</strong><br>
                     <span style="color: #666; font-size: 14px;">Connect it to your repositories</span>
-                  </div>
-
-                  <div class="step">
+        </div>
+        
+        <div class="step">
                     <div class="step-number">3</div>
                     <strong>Add your OpenAI API Key</strong><br>
                     <span style="color: #666; font-size: 14px;">This powers the AI code reviews (your key, your control)</span>
-                  </div>
-
+    </div>
+    
                   <div class="step">
                     <div class="step-number">4</div>
                     <strong>Start reviewing!</strong><br>
                     <span style="color: #666; font-size: 14px;">Open a PR and watch NirikshanAI review it automatically</span>
-                  </div>
-                </div>
-
+      </div>
+    </div>
+    
                 <p style="margin-top: 30px;">
                   Need help? Check out our <a href="${APP_URL}" style="color: #10b981;">documentation</a> or reach out to support.
                 </p>
@@ -221,8 +239,8 @@ export async function sendAccessApprovedEmail(user: {
                 <p>Happy coding! 🚀</p>
                 <p style="margin-top: 10px;">
                   <a href="${APP_URL}" style="color: #10b981;">Visit Dashboard</a>
-                </p>
-              </div>
+      </p>
+    </div>
             </div>
           </body>
         </html>
@@ -310,14 +328,14 @@ export async function sendAccessRejectedEmail(user: {
 
                 <p style="margin-top: 30px; color: #666; font-size: 14px;">
                   Thank you for your understanding.
-                </p>
-              </div>
-              <div class="footer">
+    </p>
+  </div>
+  <div class="footer">
                 <p>Best regards,<br>The ${APP_NAME} Team</p>
               </div>
-            </div>
-          </body>
-        </html>
+  </div>
+</body>
+</html>
       `,
     });
 

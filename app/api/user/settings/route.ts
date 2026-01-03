@@ -9,13 +9,13 @@ import { kvdb } from "@/lib/db-kv";
 export async function GET() {
   try {
     const session = await getSession();
-    
+
     if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
 
     // Get all installations to find the user's installation
     const installations = await kvdb.installation.getAll();
@@ -67,9 +67,9 @@ export async function POST(req: Request) {
 
     console.log(`   User: ${session.email}`);
 
-    const { openaiKey } = await req.json();
+  const { openaiKey } = await req.json();
 
-    if (!openaiKey || !openaiKey.startsWith("sk-")) {
+  if (!openaiKey || !openaiKey.startsWith("sk-")) {
       console.error("❌ Invalid OpenAI key format");
       return NextResponse.json(
         { error: "Invalid OpenAI key format" },
@@ -159,7 +159,7 @@ export async function DELETE() {
 
     console.log(`✅ OpenAI key deleted from installation ${installation.installationId}`);
 
-    return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error("❌ Failed to delete OpenAI key:", err);
     return NextResponse.json(
