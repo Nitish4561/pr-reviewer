@@ -11,8 +11,10 @@ export function SimpleBarChart({ data }: SimpleChartProps) {
     <div className="space-y-3">
       {data.map((item) => (
         <div key={item.label} className="flex items-center gap-3">
-          <div className="w-32 text-sm text-gray-600">{item.label}</div>
-          <div className="flex-1 bg-gray-100 rounded-full h-8 relative overflow-hidden">
+          <div className={`w-32 text-sm ${item.className || "text-gray-600 dark:text-gray-300"}`}>
+            {item.label}
+          </div>
+          <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-8 relative overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500 flex items-center justify-end px-3"
               style={{
@@ -35,7 +37,7 @@ export function SimplePieChart({ data }: SimpleChartProps) {
   
   if (total === 0) {
     return (
-      <div className="w-48 h-48 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+      <div className="w-48 h-48 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500">
         No data
       </div>
     );
@@ -59,7 +61,7 @@ export function SimplePieChart({ data }: SimpleChartProps) {
   return (
     <div className="flex items-center gap-6">
       <svg width="200" height="200" viewBox="0 0 200 200">
-        <circle cx="100" cy="100" r="80" fill="none" stroke="#f3f4f6" strokeWidth="40" />
+        <circle cx="100" cy="100" r="80" fill="none" stroke="currentColor" strokeWidth="40" className="text-gray-200 dark:text-gray-600" />
         {segments.map((segment, index) => {
           const startAngle = (segment.startAngle * Math.PI) / 180;
           const endAngle = ((segment.startAngle + segment.angle) * Math.PI) / 180;
@@ -87,11 +89,11 @@ export function SimplePieChart({ data }: SimpleChartProps) {
             />
           );
         })}
-        <circle cx="100" cy="100" r="50" fill="white" />
-        <text x="100" y="95" textAnchor="middle" className="text-2xl font-bold fill-gray-800">
+        <circle cx="100" cy="100" r="50" fill="currentColor" className="text-white dark:text-gray-800" />
+        <text x="100" y="95" textAnchor="middle" className="text-2xl font-bold fill-gray-800 dark:fill-gray-200">
           {total}
         </text>
-        <text x="100" y="115" textAnchor="middle" className="text-sm fill-gray-500">
+        <text x="100" y="115" textAnchor="middle" className="text-sm fill-gray-500 dark:fill-gray-400">
           Total
         </text>
       </svg>
@@ -103,7 +105,7 @@ export function SimplePieChart({ data }: SimpleChartProps) {
               className="w-4 h-4 rounded-sm"
               style={{ backgroundColor: segment.color }}
             />
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-gray-700 dark:text-gray-300">
               {segment.label}: {segment.value} ({segment.percentage.toFixed(0)}%)
             </span>
           </div>
