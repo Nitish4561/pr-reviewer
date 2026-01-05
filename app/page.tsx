@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
 import UserProfileDropdown from "@/components/UserProfileDropdown";
+import ContributionGridBackground from "@/components/ContributionGridBackground";
 import { authStateManager } from "@/lib/auth-state";
 
 function ErrorHandler({ setStatus, onLogout }: { setStatus: (status: string) => void; onLogout?: () => void }) {
@@ -249,8 +250,11 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
-      <div className="max-w-5xl mx-auto px-6 py-20 space-y-20">
+    <main className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors relative">
+      {/* Animated Background */}
+      <ContributionGridBackground />
+      
+      <div className="max-w-5xl mx-auto px-6 py-20 space-y-20 relative z-10">
         {/* User Profile / Theme Toggle */}
         <div className="fixed top-6 right-6 z-10">
           {isLoggedIn && currentUser ? (
@@ -270,15 +274,15 @@ export default function HomePage() {
 
       {/* Hero */}
       <section className="text-center space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-sm font-medium">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/20 backdrop-blur-sm border border-yellow-400/30 text-yellow-200 text-sm font-medium shadow-lg">
           <span>🔒</span>
           <span>Private Beta</span>
         </div>
 
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight dark:text-white">
+          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white drop-shadow-lg">
           NirikshanAI
         </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300">
+          <p className="text-xl text-gray-200 drop-shadow-md">
           AI-powered Pull Request reviews that think like a senior engineer.
         </p>
 
@@ -297,7 +301,11 @@ export default function HomePage() {
 
         {/* Show error/status messages */}
         {status && (
-          <div className={`p-4 rounded-lg ${status.startsWith('✅') || status.startsWith('🎉') ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>
+          <div className={`p-4 rounded-lg backdrop-blur-sm border shadow-lg ${
+            status.startsWith('✅') || status.startsWith('🎉') 
+              ? 'bg-green-500/20 border-green-400/30 text-green-200' 
+              : 'bg-red-500/20 border-red-400/30 text-red-200'
+          }`}>
             {status}
           </div>
         )}
@@ -438,15 +446,15 @@ export default function HomePage() {
             </form>
           </div>
         ) : (
-          <div className="max-w-md mx-auto bg-white rounded-lg border border-gray-200 p-6 text-left">
+          <div className="max-w-md mx-auto bg-gray-900/80 backdrop-blur-sm rounded-lg border border-gray-600/30 p-6 text-left shadow-xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Request Access</h3>
+              <h3 className="text-lg font-semibold text-white">Request Access</h3>
               <button
                 onClick={() => {
                   setShowRequestForm(false);
                   setStatus("");
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-200"
               >
                 ✕
               </button>
@@ -534,17 +542,17 @@ export default function HomePage() {
           ["Connect", "Add your OpenAI API key"],
           ["Review", "Get line-by-line PR feedback automatically"],
         ].map(([title, desc]) => (
-          <div key={title} className="rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 p-6 text-center hover:shadow-md transition-shadow">
-            <h3 className="font-semibold text-lg dark:text-white">{title}</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{desc}</p>
+          <div key={title} className="rounded-lg border border-gray-600/30 bg-gray-900/40 backdrop-blur-sm p-6 text-center hover:shadow-xl hover:bg-gray-900/60 transition-all duration-300">
+            <h3 className="font-semibold text-lg text-white">{title}</h3>
+            <p className="text-sm text-gray-300 mt-2">{desc}</p>
           </div>
         ))}
       </section>
 
       {/* Why */}
       <section className="space-y-6">
-        <h2 className="text-2xl font-semibold dark:text-white">Why NirikshanAI?</h2>
-        <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
+        <h2 className="text-2xl font-semibold text-white drop-shadow-lg">Why NirikshanAI?</h2>
+        <ul className="list-disc list-inside text-gray-200 space-y-2">
           <li>Line-wise comments directly on GitHub PRs</li>
           <li>Multiple comments per file</li>
           <li>No hallucinations — only real diffs</li>
@@ -553,9 +561,9 @@ export default function HomePage() {
       </section>
 
       {/* Security */}
-      <section className="rounded-lg bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 p-8 space-y-4">
-        <h2 className="text-xl font-semibold dark:text-white">Security & Trust</h2>
-        <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+      <section className="rounded-lg bg-gray-900/40 backdrop-blur-sm border border-gray-600/30 p-8 space-y-4 shadow-xl">
+        <h2 className="text-xl font-semibold text-white">Security & Trust</h2>
+        <ul className="text-sm text-gray-200 space-y-2">
           <li>🔒 Your API key is encrypted</li>
           <li>📄 Only PR diffs are analyzed</li>
           <li>🧹 No long-term code storage</li>
@@ -574,16 +582,16 @@ export default function HomePage() {
           </button>
         )}
         
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-gray-300">
           Already have access?{" "}
-          <a href="/dashboard" className="text-blue-600 hover:underline">
+          <a href="/dashboard" className="text-green-400 hover:underline">
             Go to Dashboard
           </a>
         </div>
         
         <div className="text-xs text-gray-400 pt-4">
           Admin?{" "}
-          <a href="/admin" className="text-gray-600 dark:text-gray-400 hover:underline">
+          <a href="/admin" className="text-gray-400 hover:underline">
             Access Admin Dashboard
           </a>
         </div>
