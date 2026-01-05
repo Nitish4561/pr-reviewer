@@ -1,17 +1,20 @@
 import { NextResponse } from "next/server";
-import { destroySession } from "@/lib/auth-middleware";
+import { cookies } from "next/headers";
 
+/**
+ * POST /api/auth/logout
+ * Clear session and logout user
+ */
 export async function POST() {
-  await destroySession();
-  
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:4002";
-  return NextResponse.redirect(`${baseUrl}/?logout=success`);
+  try {
+    const cookieStore = await cookies();
+    
+    // Clear the session cookie
+    cookieStore.delete("session");
+    
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Logout error:", error);
+    return NextResponse.json({ error: "Logout failed" }, { status: 500 });
+  }
 }
-
-export async function GET() {
-  await destroySession();
-  
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:4002";
-  return NextResponse.redirect(`${baseUrl}/?logout=success`);
-}
-

@@ -19,8 +19,12 @@ export async function GET() {
         id: user.id,
         email: user.email,
         githubUsername: user.githubUsername,
+        githubId: user.githubId,
+        avatarUrl: user.avatarUrl,
         role: user.role,
         status: user.status,
+        createdAt: user.createdAt,
+        lastLogin: user.lastLogin,
       },
     });
   } catch (err) {

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { SimpleBarChart, SimplePieChart } from "@/components/SimpleChart";
-import ThemeToggle from "@/components/ThemeToggle";
+import UserProfileDropdown from "@/components/UserProfileDropdown";
 import Modal from "@/components/Modal";
 
 interface PRReview {
@@ -39,6 +39,8 @@ export default function DashboardPage() {
   const [keyPreview, setKeyPreview] = useState<string | null>(null);
   const [isEditingKey, setIsEditingKey] = useState(false);
   const [username, setUsername] = useState<string>("");
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [openaiValidation, setOpenaiValidation] = useState<{
     valid: boolean;
     keyPrefix?: string;
@@ -92,6 +94,8 @@ export default function DashboardPage() {
         const data = await res.json();
         if (data.user) {
           setUsername(data.user.githubUsername || data.user.email.split("@")[0]);
+          setUserEmail(data.user.email || "");
+          setAvatarUrl(data.user.avatarUrl || "");
         }
       }
     } catch (err) {
@@ -282,18 +286,19 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-6xl px-6 py-12 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          {username && (
-            <p className="text-lg text-gray-600 dark:text-gray-300 mb-1">
-              Welcome, <span className="font-semibold text-gray-900 dark:text-gray-100">{username}</span>! 👋
-            </p>
-          )}
           <h1 className="text-3xl font-bold dark:text-white">📊 Dashboard</h1>
           <p className="mt-1 text-gray-600 dark:text-gray-300">
             View your PR reviews and configure settings
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <ThemeToggle />
+          {username && (
+            <UserProfileDropdown 
+              username={username}
+              email={userEmail}
+              avatarUrl={avatarUrl}
+            />
+          )}
         </div>
       </div>
 

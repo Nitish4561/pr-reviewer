@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
+import UserProfileDropdown from "@/components/UserProfileDropdown";
 
 function ErrorHandler({ setStatus }: { setStatus: (status: string) => void }) {
   const searchParams = useSearchParams();
@@ -40,6 +41,35 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [checkEmail, setCheckEmail] = useState("");
   const [approvalStatus, setApprovalStatus] = useState<any>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{
+    username: string;
+    email: string;
+    avatarUrl: string;
+  } | null>(null);
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  async function checkAuthStatus() {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.authenticated && data.user) {
+          setIsLoggedIn(true);
+          setCurrentUser({
+            username: data.user.githubUsername || data.user.email.split("@")[0],
+            email: data.user.email,
+            avatarUrl: data.user.avatarUrl || "",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check auth status:", error);
+    }
+  }
 
   async function handleRequestAccess(e: React.FormEvent) {
     e.preventDefault();
@@ -96,9 +126,17 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       <div className="max-w-5xl mx-auto px-6 py-20 space-y-20">
-        {/* Theme Toggle */}
+        {/* User Profile / Theme Toggle */}
         <div className="fixed top-6 right-6 z-10">
-          <ThemeToggle />
+          {isLoggedIn && currentUser ? (
+            <UserProfileDropdown 
+              username={currentUser.username}
+              email={currentUser.email}
+              avatarUrl={currentUser.avatarUrl}
+            />
+          ) : (
+            <ThemeToggle />
+          )}
         </div>
 
         <Suspense fallback={null}>

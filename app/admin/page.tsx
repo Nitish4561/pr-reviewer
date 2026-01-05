@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import UserProfileDropdown from "@/components/UserProfileDropdown";
 import ThemeToggle from "@/components/ThemeToggle";
 import Modal from "@/components/Modal";
 
@@ -25,6 +26,8 @@ interface WhitelistedUser {
 
 export default function AdminPage() {
   const [adminEmail, setAdminEmail] = useState("");
+  const [adminUsername, setAdminUsername] = useState("");
+  const [adminAvatar, setAdminAvatar] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [whitelist, setWhitelist] = useState<WhitelistedUser[]>([]);
@@ -64,6 +67,21 @@ export default function AdminPage() {
       if (res.ok) {
         setRequests(data.requests || []);
         setWhitelist(data.whitelist || []);
+        
+        // Fetch admin user profile data
+        try {
+          const userRes = await fetch("/api/auth/me");
+          if (userRes.ok) {
+            const userData = await userRes.json();
+            if (userData.user) {
+              setAdminUsername(userData.user.githubUsername || userData.user.email.split("@")[0]);
+              setAdminAvatar(userData.user.avatarUrl || "");
+            }
+          }
+        } catch (userErr) {
+          console.error("Failed to fetch user data:", userErr);
+        }
+        
         return true; // Success
       } else {
         // Show error and prevent login
@@ -231,16 +249,16 @@ export default function AdminPage() {
       <div className="flex items-center justify-between">
         <div>
             <h1 className="text-3xl font-bold dark:text-white">🛡️ Admin Dashboard</h1>
-            <p className="text-gray-600 dark:text-gray-300 mt-1">Logged in as: {adminEmail}</p>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">Manage user access and system settings</p>
         </div>
           <div className="flex gap-4 items-center">
-            <ThemeToggle />
-        <button
-          onClick={() => setIsAuthenticated(false)}
-              className="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
-        >
-          Logout
-        </button>
+            {adminUsername && (
+              <UserProfileDropdown 
+                username={adminUsername}
+                email={adminEmail}
+                avatarUrl={adminAvatar}
+              />
+            )}
           <a
             href="/"
             className="text-sm text-gray-600 hover:text-gray-900"
