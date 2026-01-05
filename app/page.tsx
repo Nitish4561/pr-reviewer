@@ -250,7 +250,7 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors relative">
+    <main className="min-h-screen bg-black transition-colors relative overflow-hidden">
       {/* Animated Background */}
       <ContributionGridBackground />
       

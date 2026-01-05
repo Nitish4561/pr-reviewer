@@ -14,25 +14,35 @@ type Cell = {
   intensity: number;
 };
 
+// Generate initial cells outside component to avoid SSR issues
+const generateInitialCells = (): Cell[] => {
+  const initial: Cell[] = [];
+  let id = 0;
+
+  for (let col = 0; col < COLS; col++) {
+    for (let row = 0; row < ROWS; row++) {
+      initial.push({
+        id: id++,
+        x: col * (CELL + GAP),
+        y: row * (CELL + GAP),
+        intensity: Math.random(),
+      });
+    }
+  }
+  return initial;
+};
+
 export default function ContributionGridBackground() {
-  const [cells, setCells] = useState<Cell[]>([]);
+  const [cells, setCells] = useState<Cell[]>(() => generateInitialCells());
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const initial: Cell[] = [];
-    let id = 0;
-
-    for (let col = 0; col < COLS; col++) {
-      for (let row = 0; row < ROWS; row++) {
-        initial.push({
-          id: id++,
-          x: col * (CELL + GAP),
-          y: row * (CELL + GAP),
-          intensity: Math.random(),
-        });
-      }
-    }
-
-    setCells(initial);
+    console.log("🎨 ContributionGridBackground component mounted");
+    setMounted(true);
+    
+    // Regenerate cells on mount to ensure fresh random values
+    setCells(generateInitialCells());
+    console.log("🔢 Generated", cells.length, "cells for contribution grid");
 
     const interval = setInterval(() => {
       setCells(prev =>
@@ -47,14 +57,23 @@ export default function ContributionGridBackground() {
     return () => clearInterval(interval);
   }, []);
 
+  // Don't render anything until mounted to avoid hydration mismatch
+  if (!mounted) {
+    return <div className="fixed inset-0 -z-10 overflow-hidden bg-black" />;
+  }
+
+  console.log("🎨 Rendering ContributionGridBackground with", cells.length, "cells");
+  
   return (
-    <div className="absolute inset-0 -z-10 overflow-hidden bg-black">
+    <div className="fixed inset-0 -z-10 overflow-hidden bg-black">
+      {/* Fallback gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-green-900/20" />
       <svg
         width="100%"
         height="100%"
         viewBox={`0 0 ${COLS * (CELL + GAP)} ${ROWS * (CELL + GAP)}`}
         preserveAspectRatio="xMidYMid slice"
-        className="opacity-80"
+        className="opacity-90"
       >
         <defs>
           <radialGradient id="glow" r="65%">
@@ -71,7 +90,7 @@ export default function ContributionGridBackground() {
           </filter>
         </defs>
 
-        {cells.map(cell => {
+        {cells.length > 0 ? cells.map(cell => {
           const alpha = 0.15 + cell.intensity * 0.85;
 
           return (
@@ -100,7 +119,21 @@ export default function ContributionGridBackground() {
               />
             </g>
           );
-        })}
+        }) : (
+          // Fallback static grid if cells aren't loaded
+          Array.from({ length: 50 }, (_, i) => (
+            <rect
+              key={`fallback-${i}`}
+              x={(i % 10) * 60}
+              y={Math.floor(i / 10) * 60}
+              width="40"
+              height="40"
+              rx="4"
+              fill="#22c55e"
+              opacity="0.3"
+            />
+          ))
+        )}
       </svg>
 
       {/* Vignette overlay */}
