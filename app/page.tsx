@@ -250,7 +250,7 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-black transition-colors relative overflow-hidden">
+    <main className="min-h-screen transition-colors relative overflow-hidden">
       {/* Animated Background - Always visible */}
       <ContributionGridBackground />
       
@@ -278,6 +278,9 @@ export default function HomePage() {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/20 backdrop-blur-sm border border-yellow-400/30 text-yellow-200 text-sm font-medium shadow-lg">
           <span>🔒</span>
           <span>Private Beta</span>
+          <p className="text-md text-white">
+              Limited access during beta • Uses your own OpenAI key
+          </p>
         </div>
 
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white drop-shadow-lg">
@@ -375,10 +378,6 @@ export default function HomePage() {
               )}
             </div>
 
-            <p className="text-sm text-gray-500">
-              Limited access during beta • Uses your own OpenAI key
-            </p>
-            
             <p className="text-sm text-gray-400 mt-4">
               Admin? <a href="/admin" className="text-blue-600 dark:text-blue-400 hover:underline">Login here</a>
             </p>
@@ -543,9 +542,9 @@ export default function HomePage() {
           ["Connect", "Add your OpenAI API key"],
           ["Review", "Get line-by-line PR feedback automatically"],
         ].map(([title, desc]) => (
-          <div key={title} className="rounded-lg border border-gray-600/30 bg-gray-900/40 backdrop-blur-sm p-6 text-center hover:shadow-xl hover:bg-gray-900/60 transition-all duration-300">
-            <h3 className="font-semibold text-lg text-white">{title}</h3>
-            <p className="text-sm text-gray-300 mt-2">{desc}</p>
+          <div key={title} className="rounded-lg border border-white dark:border-gray-600/30 bg-white backdrop-blur-sm p-6 text-center hover:shadow-xl hover:bg-gray-900/60 transition-all duration-300 dark:bg-gray-800">
+            <h3 className="font-semibold text-lg text-black dark:text-white">{title}</h3>
+            <p className="text-sm text-black dark:text-gray-300 mt-2">{desc}</p>
           </div>
         ))}
       </section>
