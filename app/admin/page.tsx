@@ -261,8 +261,8 @@ export default function AdminPage() {
             )}
           <a
             href="/"
-            className="text-sm text-gray-600 hover:text-gray-900"
-          >
+          className="text-sm text-gray-600 hover:text-gray-900"
+        >
             ← Home
           </a>
         </div>

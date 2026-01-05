@@ -109,9 +109,9 @@ export default function DashboardPage() {
         router.push("/?error=unauthorized");
         return;
       }
-      
-      if (res.ok) {
-        const data = await res.json();
+
+    if (res.ok) {
+      const data = await res.json();
         setReviews(data.reviews || []);
         setStats(data.stats || null);
       }

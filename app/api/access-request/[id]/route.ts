@@ -58,7 +58,7 @@ export async function PATCH(
     // Send email notification to user (AWAIT to catch errors)
     let emailResult = null;
     try {
-      if (status === "approved") {
+    if (status === "approved") {
         console.log(`📧 Attempting to send approval email to: ${updated.email}`);
         emailResult = await sendAccessApprovedEmail({
           name: updated.name,
@@ -79,7 +79,7 @@ export async function PATCH(
       console.error('❌ Email sending error:', emailError);
       console.error('   Error message:', emailError.message);
       console.error('   Error stack:', emailError.stack);
-      // Don't fail the request if email fails
+        // Don't fail the request if email fails
     }
 
     return NextResponse.json({

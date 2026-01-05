@@ -18,7 +18,14 @@ function ErrorHandler({ setStatus }: { setStatus: (status: string) => void }) {
     if (installation === "success") {
       setStatus("🎉 GitHub App installed successfully! Sign in with GitHub to access your dashboard and add your OpenAI API key.");
     } else if (error === "not_approved" && emailParam) {
-      setStatus(`❌ Your access request (${emailParam}) is pending admin approval. Please wait for approval before signing in.`);
+      // Check if this user was previously approved (might be revoked)
+      const lastCheckedEmail = localStorage.getItem('lastCheckedEmail');
+      if (lastCheckedEmail === emailParam) {
+        setStatus(`🚫 Access revoked: Your access for ${emailParam} has been revoked by an administrator. Please contact support if you believe this is an error.`);
+        localStorage.removeItem('lastCheckedEmail'); // Clear stored approval
+      } else {
+        setStatus(`❌ Access pending: Your access request for ${emailParam} is pending admin approval. Please wait for approval before signing in.`);
+      }
     } else if (error === "auth_failed") {
       const message = errorMessage ? ` (${decodeURIComponent(errorMessage)})` : "";
       setStatus(`❌ GitHub authentication failed${message}. Please try again.`);
@@ -42,6 +49,7 @@ export default function HomePage() {
   const [checkEmail, setCheckEmail] = useState("");
   const [approvalStatus, setApprovalStatus] = useState<any>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isApproved, setIsApproved] = useState<boolean | null>(null); // null = unknown, true = approved, false = not approved
   const [currentUser, setCurrentUser] = useState<{
     username: string;
     email: string;
@@ -59,15 +67,40 @@ export default function HomePage() {
         const data = await res.json();
         if (data.authenticated && data.user) {
           setIsLoggedIn(true);
+          setIsApproved(true); // If logged in, they must be approved
           setCurrentUser({
             username: data.user.githubUsername || data.user.email.split("@")[0],
             email: data.user.email,
             avatarUrl: data.user.avatarUrl || "",
           });
+        } else {
+          setIsLoggedIn(false);
+          // Check if user has an email in localStorage (previously checked approval)
+          const lastCheckedEmail = localStorage.getItem('lastCheckedEmail');
+          if (lastCheckedEmail) {
+            await checkUserApprovalStatus(lastCheckedEmail);
+          }
         }
       }
     } catch (error) {
       console.error("Failed to check auth status:", error);
+    }
+  }
+
+  async function checkUserApprovalStatus(email: string) {
+    try {
+      const res = await fetch(`/api/check-approval?email=${encodeURIComponent(email)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setIsApproved(data.approved);
+        if (data.approved) {
+          localStorage.setItem('lastCheckedEmail', email);
+        } else {
+          localStorage.removeItem('lastCheckedEmail');
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check approval status:", error);
     }
   }
 
@@ -113,6 +146,13 @@ export default function HomePage() {
 
       if (res.ok) {
         setApprovalStatus(data);
+        // Store email if approved for future login attempts
+        if (data.approved) {
+          localStorage.setItem('lastCheckedEmail', checkEmail);
+          setIsApproved(true);
+        } else {
+          setIsApproved(false);
+        }
       } else {
         setApprovalStatus({ error: data.error || "Failed to check status" });
       }
@@ -167,30 +207,65 @@ export default function HomePage() {
         {!showRequestForm && !showCheckStatus ? (
           <>
             <div className="flex flex-col gap-4 items-center">
-              {/* Primary CTA */}
-              <div className="flex gap-4">
-            <button
-              onClick={() => setShowRequestForm(true)}
-                  className="rounded-lg bg-blue-600 px-6 py-3 text-white font-medium hover:bg-blue-700 transition-colors"
-            >
-              Request Beta Access
-            </button>
-                
-                <a
-                  href="/api/auth/github"
-                  className="rounded-lg bg-gray-900 dark:bg-indigo-600 px-6 py-3 text-white font-medium hover:bg-gray-800 dark:hover:bg-indigo-700 transition-colors"
-                >
-                  Sign in with GitHub
-                </a>
-              </div>
+              {/* Conditional CTA based on user state */}
+              {isLoggedIn ? (
+                // User is logged in - show dashboard link
+                <div className="flex gap-4">
+                  <a
+                    href="/dashboard"
+                    className="rounded-lg bg-green-600 px-6 py-3 text-white font-medium hover:bg-green-700 transition-colors"
+                  >
+                    Go to Dashboard
+                  </a>
+                </div>
+              ) : isApproved === true ? (
+                // User is approved but not logged in - show sign in button
+                <div className="flex gap-4">
+                  <a
+                    href="/api/auth/github"
+                    className="rounded-lg bg-gray-900 dark:bg-indigo-600 px-6 py-3 text-white font-medium hover:bg-gray-800 dark:hover:bg-indigo-700 transition-colors"
+                  >
+                    Sign in with GitHub
+                  </a>
+                </div>
+              ) : isApproved === false ? (
+                // User is not approved - show request access
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setShowRequestForm(true)}
+                    className="rounded-lg bg-blue-600 px-6 py-3 text-white font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Request Beta Access
+                  </button>
+                </div>
+              ) : (
+                // Unknown state - show both options
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setShowRequestForm(true)}
+                    className="rounded-lg bg-blue-600 px-6 py-3 text-white font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Request Beta Access
+                  </button>
+                  
+                  <a
+                    href="/api/auth/github"
+                    className="rounded-lg bg-gray-900 dark:bg-indigo-600 px-6 py-3 text-white font-medium hover:bg-gray-800 dark:hover:bg-indigo-700 transition-colors"
+                  >
+                    Sign in with GitHub
+                  </a>
+                </div>
+              )}
 
-              {/* Check Status Link */}
-              <button
-                onClick={() => setShowCheckStatus(true)}
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Check my approval status
-              </button>
+              {/* Check Status Link - show for non-logged-in users */}
+              {!isLoggedIn && (
+                <button
+                  onClick={() => setShowCheckStatus(true)}
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Check my approval status
+                </button>
+              )}
             </div>
 
             <p className="text-sm text-gray-500">

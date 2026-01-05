@@ -31,22 +31,22 @@ export async function GET(req: Request) {
 
   try {
     console.log("📡 Step 1: Exchanging OAuth code for access token...");
-    // Step 1: exchange code for access token
-    const tokenRes = await fetch(
-      "https://github.com/login/oauth/access_token",
-      {
-        method: "POST",
-        headers: { Accept: "application/json" },
-        body: new URLSearchParams({
-          client_id: process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID!,
-          client_secret: process.env.GITHUB_CLIENT_SECRET!,
-          code,
-        }),
-      }
-    );
+  // Step 1: exchange code for access token
+  const tokenRes = await fetch(
+    "https://github.com/login/oauth/access_token",
+    {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      body: new URLSearchParams({
+        client_id: process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID!,
+        client_secret: process.env.GITHUB_CLIENT_SECRET!,
+        code,
+      }),
+    }
+  );
 
     const tokenData = await tokenRes.json() as { access_token?: string; error?: string };
-    
+
     if (!tokenData.access_token) {
       console.error("❌ Failed to get access token:", tokenData);
       throw new Error(`GitHub OAuth failed: ${tokenData.error || 'Unknown error'}`);
@@ -56,11 +56,11 @@ export async function GET(req: Request) {
 
     console.log("👤 Step 2: Fetching user data from GitHub...");
     // Step 2: fetch user from GitHub
-    const userRes = await fetch("https://api.github.com/user", {
-      headers: {
+  const userRes = await fetch("https://api.github.com/user", {
+    headers: {
         Authorization: `Bearer ${tokenData.access_token}`,
-      },
-    });
+    },
+  });
 
     const githubUser = await userRes.json();
     console.log("✅ GitHub user data received:", {
@@ -135,8 +135,8 @@ export async function GET(req: Request) {
     console.error("   Error message:", err.message);
     console.error("   Error stack:", err.stack);
     console.error("========================================\n");
-    
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:4002";
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:4002";
     return NextResponse.redirect(`${baseUrl}?error=auth_failed&message=${encodeURIComponent(err.message)}`);
   }
 }

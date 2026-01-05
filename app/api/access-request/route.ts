@@ -26,10 +26,10 @@ export async function POST(req: Request) {
         );
       }
       if (existing.status === "pending") {
-        return NextResponse.json(
-          { error: "Your request is already pending review. Please wait for approval." },
-          { status: 400 }
-        );
+          return NextResponse.json(
+            { error: "Your request is already pending review. Please wait for approval." },
+            { status: 400 }
+          );
       }
     }
 
