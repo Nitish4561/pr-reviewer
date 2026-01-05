@@ -1,36 +1,62 @@
 import { NextResponse } from "next/server";
 import { kvdb } from "@/lib/db-kv";
+import { getSession } from "@/lib/auth-middleware";
 
 export async function GET() {
   console.log("🔍 Checking for installations...");
   
-  const installations = await kvdb.installation.getAll();
+  const session = await getSession();
   
-  console.log(`   Found ${installations.length} installation(s)`);
-
-  // Find the most recent installation with repositories
-  const activeInstallation = installations
-    .filter(inst => inst.repoIds && inst.repoIds.length > 0)
-    .sort((a, b) => b.installationId - a.installationId)[0];
-
-  if (!activeInstallation) {
-    console.log("   ❌ No active installation found");
+  if (!session) {
+    console.log("   ❌ No session found");
     return NextResponse.json({ 
       installed: false,
       installation: null,
-      error: "No active installation found"
+      error: "Not authenticated"
+    }, { status: 401 });
+  }
+
+  console.log(`   User: ${session.email} (@${session.githubUsername})`);
+  
+  const installations = await kvdb.installation.getAll();
+  
+  console.log(`   Found ${installations.length} total installation(s)`);
+
+  // Find THIS user's installation (matching their GitHub username)
+  const userInstallation = installations.find((inst: any) => 
+    inst.accountLogin === session.githubUsername
+  );
+
+  if (!userInstallation) {
+    console.log(`   ❌ No installation found for @${session.githubUsername}`);
+    return NextResponse.json({ 
+      installed: false,
+      installation: null,
+      error: "No installation found for your account"
     });
   }
 
-  console.log(`   ✅ Active installation found: ${activeInstallation.installationId}`);
+  // Check if installation has repositories
+  if (!userInstallation.repoIds || userInstallation.repoIds.length === 0) {
+    console.log(`   ⚠️ Installation found but no repositories configured`);
+    return NextResponse.json({ 
+      installed: false,
+      installation: null,
+      error: "Installation has no repositories"
+    });
+  }
+
+  console.log(`   ✅ Installation found for @${session.githubUsername}: ${userInstallation.installationId}`);
+  console.log(`      Repositories: ${userInstallation.repoIds.length}`);
+  console.log(`      Has OpenAI key: ${!!userInstallation.openaiKey}`);
   
   return NextResponse.json({ 
     installed: true,
     installation: {
-      installationId: activeInstallation.installationId,
-      accountLogin: activeInstallation.accountLogin,
-      repoCount: activeInstallation.repoIds.length,
-      hasOpenAIKey: !!activeInstallation.openaiKey,
+      installationId: userInstallation.installationId,
+      accountLogin: userInstallation.accountLogin,
+      repoCount: userInstallation.repoIds.length,
+      hasOpenAIKey: !!userInstallation.openaiKey,
     }
   });
 }

@@ -17,7 +17,9 @@ export async function GET() {
     );
   }
 
-    // Get all installations to find the user's installation
+    console.log(`📊 Getting settings for: ${session.email} (@${session.githubUsername})`);
+
+    // Get all installations to find THIS user's installation
     const installations = await kvdb.installation.getAll();
 
     if (installations.length === 0) {
@@ -27,11 +29,25 @@ export async function GET() {
       });
     }
 
-    const installation = installations[0];
+    // Find THIS user's installation
+    const installation = installations.find((inst: any) => 
+      inst.accountLogin === session.githubUsername
+    );
+
+    if (!installation) {
+      console.log(`   No installation found for @${session.githubUsername}`);
+      return NextResponse.json({
+        hasKey: false,
+        keyPreview: null
+      });
+    }
+
     const hasKey = !!installation.openaiKey;
     const keyPreview = hasKey 
       ? `sk-...${installation.openaiKey.slice(-4)}` 
       : null;
+
+    console.log(`   Installation: ${installation.installationId}, Has key: ${hasKey}`);
 
     return NextResponse.json({
       hasKey,
@@ -65,7 +81,7 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log(`   User: ${session.email}`);
+    console.log(`   User: ${session.email} (@${session.githubUsername})`);
 
   const { openaiKey } = await req.json();
 
@@ -79,21 +95,24 @@ export async function POST(req: Request) {
 
     console.log("   Key format: valid ✅");
 
-    // Get all installations to find the user's installation
+    // Get all installations to find THIS user's installation
     const installations = await kvdb.installation.getAll();
-    console.log(`   Found ${installations.length} installation(s)`);
+    console.log(`   Found ${installations.length} total installation(s)`);
 
-    if (installations.length === 0) {
-      console.error("❌ No installation found");
+    // Find THIS user's installation
+    const installation = installations.find((inst: any) => 
+      inst.accountLogin === session.githubUsername
+    );
+
+    if (!installation) {
+      console.error(`❌ No installation found for @${session.githubUsername}`);
       return NextResponse.json(
         { error: "Please install the GitHub App first" },
         { status: 404 }
       );
     }
 
-    // Use the most recent installation
-    const installation = installations[0];
-    console.log(`   Using installation: ${installation.installationId}`);
+    console.log(`   Using installation: ${installation.installationId} for @${installation.accountLogin}`);
 
     // Save OpenAI key to the installation
     await kvdb.installation.upsert({
@@ -134,21 +153,26 @@ export async function DELETE() {
       );
     }
 
-    console.log(`   User: ${session.email}`);
+    console.log(`   User: ${session.email} (@${session.githubUsername})`);
 
-    // Get all installations
+    // Get all installations to find THIS user's installation
     const installations = await kvdb.installation.getAll();
-    console.log(`   Found ${installations.length} installation(s)`);
+    console.log(`   Found ${installations.length} total installation(s)`);
 
-    if (installations.length === 0) {
+    // Find THIS user's installation
+    const installation = installations.find((inst: any) => 
+      inst.accountLogin === session.githubUsername
+    );
+
+    if (!installation) {
+      console.error(`❌ No installation found for @${session.githubUsername}`);
       return NextResponse.json(
         { error: "No installation found" },
         { status: 404 }
       );
     }
 
-    const installation = installations[0];
-    console.log(`   Using installation: ${installation.installationId}`);
+    console.log(`   Using installation: ${installation.installationId} for @${installation.accountLogin}`);
 
     // Remove OpenAI key from the installation
     await kvdb.installation.upsert({
