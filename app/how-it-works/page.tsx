@@ -199,7 +199,7 @@ export default function HowItWorksPage() {
             <p className="text-gray-600 dark:text-gray-300 mb-6">
               Here's a visual representation of how NirikshanAI integrates with your development workflow:
             </p>
-            <MermaidDiagram diagram={flowDiagram} />
+            <MermaidDiagram chart={flowDiagram} />
           </div>
 
           {/* Key Features */}
