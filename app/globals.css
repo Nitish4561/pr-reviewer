@@ -2,9 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Root element backgrounds based on theme */
+html {
+  margin: 0;
+  padding: 0;
+}
+
 body {
   margin: 0;
   padding: 0;
+  /* Default to transparent to allow page-specific backgrounds */
+  background-color: transparent;
+}
+
+/* Theme-specific backgrounds for authenticated pages */
+html.light body {
   background-color: #f9fafb;
+}
+
+html.dark body {
+  background-color: #111827;
 }
 

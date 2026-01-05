@@ -251,9 +251,10 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-black transition-colors relative overflow-hidden">
-      {/* Animated Background */}
+      {/* Animated Background - Always visible */}
       <ContributionGridBackground />
       
+      {/* Content wrapper with high z-index to sit above background */}
       <div className="max-w-5xl mx-auto px-6 py-20 space-y-20 relative z-10">
         {/* User Profile / Theme Toggle */}
         <div className="fixed top-6 right-6 z-10">
