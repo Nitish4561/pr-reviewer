@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
 import UserProfileDropdown from "@/components/UserProfileDropdown";
 
-function ErrorHandler({ setStatus }: { setStatus: (status: string) => void }) {
+function ErrorHandler({ setStatus, onLogout }: { setStatus: (status: string) => void; onLogout?: () => void }) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -17,6 +17,16 @@ function ErrorHandler({ setStatus }: { setStatus: (status: string) => void }) {
     
     if (installation === "success") {
       setStatus("🎉 GitHub App installed successfully! Sign in with GitHub to access your dashboard and add your OpenAI API key.");
+    } else if (searchParams?.get("logout") === "true") {
+      setStatus("✅ You have been logged out successfully.");
+      // Force refresh auth status after logout
+      if (onLogout) {
+        onLogout();
+      }
+      setTimeout(() => {
+        window.history.replaceState({}, "", "/"); // Remove logout param
+        setStatus(""); // Clear the logout message
+      }, 2000);
     } else if (error === "not_approved" && emailParam) {
       // Check if this user was previously approved (might be revoked)
       const lastCheckedEmail = localStorage.getItem('lastCheckedEmail');
@@ -58,7 +68,36 @@ export default function HomePage() {
 
   useEffect(() => {
     checkAuthStatus();
+    
+    // Also check auth status when the page becomes visible again
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log("🔄 Page became visible, rechecking auth status...");
+        checkAuthStatus();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Check auth status when window regains focus
+    const handleFocus = () => {
+      console.log("🔄 Window focused, rechecking auth status...");
+      checkAuthStatus();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
+
+  // Add a manual refresh function for debugging
+  const handleRefreshAuth = () => {
+    console.log("🔄 Manually refreshing auth status...");
+    checkAuthStatus();
+  };
 
   async function checkAuthStatus() {
     try {
@@ -66,6 +105,7 @@ export default function HomePage() {
       if (res.ok) {
         const data = await res.json();
         if (data.authenticated && data.user) {
+          console.log("✅ User is authenticated:", data.user.email);
           setIsLoggedIn(true);
           setIsApproved(true); // If logged in, they must be approved
           setCurrentUser({
@@ -74,16 +114,30 @@ export default function HomePage() {
             avatarUrl: data.user.avatarUrl || "",
           });
         } else {
+          console.log("❌ User is not authenticated");
           setIsLoggedIn(false);
+          setCurrentUser(null); // Clear user data
           // Check if user has an email in localStorage (previously checked approval)
           const lastCheckedEmail = localStorage.getItem('lastCheckedEmail');
           if (lastCheckedEmail) {
+            console.log("🔍 Checking approval for stored email:", lastCheckedEmail);
             await checkUserApprovalStatus(lastCheckedEmail);
+          } else {
+            console.log("📭 No stored email found");
+            setIsApproved(null); // Reset approval status
           }
         }
+      } else {
+        console.log("❌ Auth check failed with status:", res.status);
+        setIsLoggedIn(false);
+        setCurrentUser(null);
+        setIsApproved(null);
       }
     } catch (error) {
       console.error("Failed to check auth status:", error);
+      setIsLoggedIn(false);
+      setCurrentUser(null);
+      setIsApproved(null);
     }
   }
 
@@ -180,7 +234,7 @@ export default function HomePage() {
         </div>
 
         <Suspense fallback={null}>
-          <ErrorHandler setStatus={setStatus} />
+          <ErrorHandler setStatus={setStatus} onLogout={handleRefreshAuth} />
         </Suspense>
 
       {/* Hero */}
@@ -196,6 +250,19 @@ export default function HomePage() {
           <p className="text-xl text-gray-600 dark:text-gray-300">
           AI-powered Pull Request reviews that think like a senior engineer.
         </p>
+
+        {/* Debug info (remove in production) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 p-2 rounded flex items-center justify-between">
+            <span>Debug: isLoggedIn={String(isLoggedIn)}, isApproved={String(isApproved)}, currentUser={currentUser ? 'exists' : 'null'}</span>
+            <button 
+              onClick={handleRefreshAuth}
+              className="ml-2 px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+            >
+              Refresh Auth
+            </button>
+          </div>
+        )}
 
         {/* Show error/status messages */}
         {status && (

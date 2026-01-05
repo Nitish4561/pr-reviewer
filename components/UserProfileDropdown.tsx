@@ -30,7 +30,7 @@ export default function UserProfileDropdown({ username, email, avatarUrl }: User
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/");
+      router.push("/?logout=true");
     } catch (error) {
       console.error("Logout failed:", error);
     }
