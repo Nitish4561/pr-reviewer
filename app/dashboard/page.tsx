@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { SimpleBarChart, SimplePieChart } from "@/components/SimpleChart";
 import ThemeToggle from "@/components/ThemeToggle";
 import Modal from "@/components/Modal";
-import MermaidDiagram from "@/components/MermaidDiagram";
 
 interface PRReview {
   id: string;
@@ -757,42 +756,27 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* How it Works */}
-      <div className="rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 p-6">
-        <h3 className="font-semibold dark:text-white">📋 How NirikshanAI Works</h3>
-        <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-gray-700 dark:text-gray-300">
-          <li>Add your OpenAI API key above</li>
-          <li>Create or update a pull request in your repository</li>
-          <li>NirikshanAI automatically analyzes the code</li>
-          <li>Inline comments and labels are added to the PR</li>
-          <li>Review history appears here on your dashboard</li>
-        </ol>
-      </div>
-
-      {/* PR Review Flow Diagram */}
-      <div className="rounded-xl bg-white dark:bg-gray-800 border dark:border-gray-700 p-6">
-        <h3 className="text-xl font-semibold dark:text-white mb-4">🔄 PR Review Flow</h3>
-        <MermaidDiagram
-          chart={`
-sequenceDiagram
-    participant Dev as Developer
-    participant GH as GitHub
-    participant App as NirikshanAI
-    participant AI as OpenAI GPT-4
-
-    Dev->>GH: Create/Update Pull Request
-    GH->>App: Webhook: PR opened/updated
-    App->>GH: Fetch PR files & diffs
-    GH-->>App: PR content
-    App->>AI: Analyze code with context
-    AI-->>App: Review results & suggestions
-    App->>GH: Post inline comments
-    App->>GH: Apply labels (ai-reviewed, ai-approved, ai-critical)
-    App->>App: Save review to database
-    GH-->>Dev: Notifications & comments
-    Dev->>Dev: View review on GitHub PR
-          `}
-        />
+      {/* Learn More */}
+      <div className="rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-200 dark:border-indigo-800 p-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              📚 Learn How NirikshanAI Works
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300">
+              Understand the complete workflow, features, and how we keep your code secure.
+            </p>
+          </div>
+          <button
+            onClick={() => router.push("/how-it-works")}
+            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition shadow-md flex items-center gap-2"
+          >
+            View Guide
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
       </div>
       </div>
     </div>
