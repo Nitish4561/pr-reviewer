@@ -9,8 +9,11 @@ export async function POST() {
   try {
     const cookieStore = await cookies();
     
-    // Clear the session cookie
+    // Clear all possible session cookies
     cookieStore.delete("session");
+    cookieStore.delete("nirikshan_session");
+    
+    console.log("✅ Session cookies cleared");
     
     return NextResponse.json({ success: true });
   } catch (error) {

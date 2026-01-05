@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
 import UserProfileDropdown from "@/components/UserProfileDropdown";
+import { authStateManager } from "@/lib/auth-state";
 
 function ErrorHandler({ setStatus, onLogout }: { setStatus: (status: string) => void; onLogout?: () => void }) {
   const searchParams = useSearchParams();
@@ -69,6 +70,19 @@ export default function HomePage() {
   useEffect(() => {
     checkAuthStatus();
     
+    // Subscribe to auth state changes
+    const unsubscribe = authStateManager.subscribe(() => {
+      console.log("🔔 Auth state change received, rechecking...");
+      checkAuthStatus();
+    });
+    
+    // Set up a periodic check for auth status (every 10 seconds when page is active)
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        checkAuthStatus();
+      }
+    }, 10000);
+    
     // Also check auth status when the page becomes visible again
     const handleVisibilityChange = () => {
       if (!document.hidden) {
@@ -79,25 +93,42 @@ export default function HomePage() {
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    // Check auth status when window regains focus
-    const handleFocus = () => {
-      console.log("🔄 Window focused, rechecking auth status...");
-      checkAuthStatus();
-    };
-    
-    window.addEventListener('focus', handleFocus);
-    
     return () => {
+      unsubscribe();
+      clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 
   // Add a manual refresh function for debugging
   const handleRefreshAuth = () => {
     console.log("🔄 Manually refreshing auth status...");
+    // Force clear all state first
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+    setIsApproved(null);
+    // Then recheck
     checkAuthStatus();
   };
+
+  // Check for logout parameter on every render (more reliable than useEffect)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('logout') === 'true') {
+      console.log("🚪 Logout detected, forcing state reset...");
+      setIsLoggedIn(false);
+      setCurrentUser(null);
+      setIsApproved(null);
+      setStatus("✅ You have been logged out successfully.");
+      
+      // Clean up URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+      
+      // Clear status after 3 seconds
+      setTimeout(() => setStatus(""), 3000);
+    }
+  }, []);
 
   async function checkAuthStatus() {
     try {

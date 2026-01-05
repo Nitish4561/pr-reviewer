@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
+import { authStateManager } from "@/lib/auth-state";
 
 interface UserProfileDropdownProps {
   username: string;
@@ -29,10 +30,37 @@ export default function UserProfileDropdown({ username, email, avatarUrl }: User
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/?logout=true");
+      console.log("🚪 Starting logout process...");
+      
+      // Call logout API
+      const response = await fetch("/api/auth/logout", { 
+        method: "POST",
+        credentials: 'same-origin' // Ensure cookies are sent
+      });
+      
+      if (response.ok) {
+        console.log("✅ Logout API successful");
+        
+        // Force clear any client-side storage
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('lastCheckedEmail');
+          // Clear any other relevant localStorage items
+        }
+        
+        // Notify auth state manager
+        authStateManager.forceLogout();
+        
+        // Redirect with logout parameter and force reload
+        window.location.href = "/?logout=true";
+      } else {
+        console.error("❌ Logout API failed:", response.status);
+        // Still redirect even if API fails
+        window.location.href = "/?logout=true";
+      }
     } catch (error) {
       console.error("Logout failed:", error);
+      // Force redirect anyway
+      window.location.href = "/?logout=true";
     }
   };
 
