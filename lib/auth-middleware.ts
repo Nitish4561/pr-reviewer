@@ -15,6 +15,7 @@ export interface User {
   email: string;
   githubUsername?: string;
   githubId?: string;
+  avatarUrl?: string;
   role: "admin" | "user";
   status: "active" | "suspended";
   openaiKey?: string;
@@ -208,6 +209,7 @@ export async function handleGitHubLogin(githubUser: {
   id: string;
   login: string;
   email?: string;
+  avatar_url?: string;
 }): Promise<User> {
   const email = githubUser.email || `${githubUser.login}@github.user`;
 
@@ -229,6 +231,7 @@ export async function handleGitHubLogin(githubUser: {
       email,
       githubId: githubUser.id,
       githubUsername: githubUser.login,
+      avatarUrl: githubUser.avatar_url,
       role: isAdmin ? "admin" : "user",
     });
 
@@ -241,6 +244,7 @@ export async function handleGitHubLogin(githubUser: {
     user = await kvdb.user.update(user.id, {
       githubUsername: githubUser.login,
       githubId: githubUser.id,
+      avatarUrl: githubUser.avatar_url,
     });
     console.log(`✅ User updated: ${email}`);
   }

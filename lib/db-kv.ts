@@ -584,6 +584,7 @@ export const kvdb = {
       email: string;
       githubUsername?: string;
       githubId?: string;
+      avatarUrl?: string;
       role?: "admin" | "user";
       openaiKey?: string;
     }) {
@@ -593,6 +594,7 @@ export const kvdb = {
         email: data.email.toLowerCase(),
         githubUsername: data.githubUsername,
         githubId: data.githubId,
+        avatarUrl: data.avatarUrl,
         role: data.role || "user",
         status: "active",
         openaiKey: data.openaiKey,

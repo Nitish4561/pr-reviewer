@@ -24,7 +24,7 @@ export async function GET() {
         role: user.role,
         status: user.status,
         createdAt: user.createdAt,
-        lastLogin: user.lastLogin,
+        lastLogin: user.lastLoginAt,
       },
     });
   } catch (err) {

@@ -22,6 +22,7 @@ export interface User {
   email: string;
   githubUsername?: string;
   githubId?: string;
+  avatarUrl?: string;
   role: UserRole;
   status: "active" | "suspended";
   openaiKey?: string;

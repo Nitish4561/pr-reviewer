@@ -103,6 +103,7 @@ export async function GET(req: Request) {
       id: githubUser.id.toString(),
       login: githubUser.login,
       email: userEmail,
+      avatar_url: githubUser.avatar_url,
     });
     console.log(`✅ User ready:`, {
       id: user.id,
