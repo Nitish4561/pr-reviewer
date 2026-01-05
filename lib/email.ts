@@ -128,10 +128,12 @@ export async function sendAdminAccessRequestNotification(request: {
 
     const results = await Promise.all(emailPromises);
     console.log(`✅ Admin notification sent to ${ADMIN_EMAILS.length} admin(s)`);
+    console.log(`   Full results:`, JSON.stringify(results, null, 2));
     console.log(`   Message IDs:`, results.map(r => r.data?.id));
+    console.log(`   Errors:`, results.map(r => r.error));
     
     return { 
-      success: true, 
+      success: !results.some(r => r.error), 
       messageIds: results.map(r => r.data?.id),
     };
   } catch (error: any) {
@@ -248,9 +250,14 @@ export async function sendAccessApprovedEmail(user: {
     });
 
     console.log(`✅ Approval notification sent to: ${user.email}`);
+    console.log(`   Full Resend result:`, JSON.stringify(result, null, 2));
+    console.log(`   Result data:`, result.data);
+    console.log(`   Result error:`, result.error);
+    
     return { 
-      success: true, 
-      messageId: result.data?.id 
+      success: !result.error, 
+      messageId: result.data?.id,
+      fullResult: result,
     };
   } catch (error: any) {
     console.error('❌ Failed to send approval notification:', error);
@@ -340,9 +347,14 @@ export async function sendAccessRejectedEmail(user: {
     });
 
     console.log(`✅ Rejection notification sent to: ${user.email}`);
+    console.log(`   Full Resend result:`, JSON.stringify(result, null, 2));
+    console.log(`   Result data:`, result.data);
+    console.log(`   Result error:`, result.error);
+    
     return { 
-      success: true, 
-      messageId: result.data?.id 
+      success: !result.error, 
+      messageId: result.data?.id,
+      fullResult: result,
     };
   } catch (error: any) {
     console.error('❌ Failed to send rejection notification:', error);
