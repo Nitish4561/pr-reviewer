@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { MermaidDiagram } from "@/components/MermaidDiagram";
+import ThemeToggle from "@/components/ThemeToggle";
+import MermaidDiagram from "@/components/MermaidDiagram";
 
 export default function HowItWorksPage() {
   const router = useRouter();
