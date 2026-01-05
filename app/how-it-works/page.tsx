@@ -1,11 +1,40 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
+import UserProfileDropdown from "@/components/UserProfileDropdown";
 import MermaidDiagram from "@/components/MermaidDiagram";
 
 export default function HowItWorksPage() {
   const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<{
+    username: string;
+    email: string;
+    avatarUrl: string;
+  } | null>(null);
+
+  useEffect(() => {
+    fetchCurrentUser();
+  }, []);
+
+  async function fetchCurrentUser() {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setCurrentUser({
+            username: data.user.githubUsername || data.user.email.split("@")[0],
+            email: data.user.email,
+            avatarUrl: data.user.avatarUrl || "",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch current user:", error);
+    }
+  }
 
   const flowDiagram = `
     sequenceDiagram
@@ -46,7 +75,15 @@ export default function HowItWorksPage() {
                 📚 How NirikshanAI Works
               </h1>
             </div>
-            <ThemeToggle />
+            {currentUser ? (
+              <UserProfileDropdown 
+                username={currentUser.username}
+                email={currentUser.email}
+                avatarUrl={currentUser.avatarUrl}
+              />
+            ) : (
+              <ThemeToggle />
+            )}
           </div>
         </div>
       </header>

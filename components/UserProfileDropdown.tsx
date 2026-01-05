@@ -55,12 +55,13 @@ export default function UserProfileDropdown({ username, email, avatarUrl }: User
       description: "Learn about NirikshanAI",
       href: "/how-it-works"
     },
-    {
-      icon: "👤",
-      label: "Your Profile",
-      description: "Account settings",
-      href: "/settings/profile"
-    }
+    // {
+    //   icon: "👤",
+    //   label: "Your Profile",
+    //   description: "Account settings (Coming Soon)",
+    //   href: "/settings/profile",
+    //   disabled: true
+    // }
   ];
 
   return (

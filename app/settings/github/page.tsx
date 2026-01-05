@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import ThemeToggle from "@/components/ThemeToggle";
+import UserProfileDropdown from "@/components/UserProfileDropdown";
 
 export default function GitHubSettingsPage() {
   const router = useRouter();
@@ -10,11 +10,35 @@ export default function GitHubSettingsPage() {
   const [installationData, setInstallationData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [appSlug, setAppSlug] = useState("");
+  const [currentUser, setCurrentUser] = useState<{
+    username: string;
+    email: string;
+    avatarUrl: string;
+  } | null>(null);
 
   useEffect(() => {
     checkInstallation();
     fetchAppSlug();
+    fetchCurrentUser();
   }, []);
+
+  async function fetchCurrentUser() {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setCurrentUser({
+            username: data.user.githubUsername || data.user.email.split("@")[0],
+            email: data.user.email,
+            avatarUrl: data.user.avatarUrl || "",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch current user:", error);
+    }
+  }
 
   async function fetchAppSlug() {
     try {
@@ -66,7 +90,13 @@ export default function GitHubSettingsPage() {
                 🔗 GitHub App Integration
               </h1>
             </div>
-            <ThemeToggle />
+            {currentUser && (
+              <UserProfileDropdown 
+                username={currentUser.username}
+                email={currentUser.email}
+                avatarUrl={currentUser.avatarUrl}
+              />
+            )}
           </div>
         </div>
       </header>

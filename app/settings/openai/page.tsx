@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import ThemeToggle from "@/components/ThemeToggle";
+import UserProfileDropdown from "@/components/UserProfileDropdown";
 import Modal from "@/components/Modal";
 
 export default function OpenAISettingsPage() {
@@ -13,6 +13,11 @@ export default function OpenAISettingsPage() {
   const [isEditingKey, setIsEditingKey] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [currentUser, setCurrentUser] = useState<{
+    username: string;
+    email: string;
+    avatarUrl: string;
+  } | null>(null);
   const [openaiValidation, setOpenaiValidation] = useState<{
     valid: boolean;
     keyPrefix?: string;
@@ -36,7 +41,26 @@ export default function OpenAISettingsPage() {
 
   useEffect(() => {
     fetchKeyStatus();
+    fetchCurrentUser();
   }, []);
+
+  async function fetchCurrentUser() {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setCurrentUser({
+            username: data.user.githubUsername || data.user.email.split("@")[0],
+            email: data.user.email,
+            avatarUrl: data.user.avatarUrl || "",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch current user:", error);
+    }
+  }
 
   useEffect(() => {
     if (hasKey) {
@@ -195,7 +219,13 @@ export default function OpenAISettingsPage() {
                 🔑 OpenAI API Key
               </h1>
             </div>
-            <ThemeToggle />
+            {currentUser && (
+              <UserProfileDropdown 
+                username={currentUser.username}
+                email={currentUser.email}
+                avatarUrl={currentUser.avatarUrl}
+              />
+            )}
           </div>
         </div>
       </header>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import ThemeToggle from "@/components/ThemeToggle";
+import UserProfileDropdown from "@/components/UserProfileDropdown";
 
 interface UserProfile {
   id: string;
@@ -99,7 +99,11 @@ export default function ProfileSettingsPage() {
                 👤 Your Profile
               </h1>
             </div>
-            <ThemeToggle />
+            <UserProfileDropdown 
+              username={profile.githubUsername}
+              email={profile.email}
+              avatarUrl={profile.avatarUrl || ""}
+            />
           </div>
         </div>
       </header>
