@@ -12,6 +12,7 @@ import {
   createReviewComment,
   createReviewSummary,
   applyLabels,
+  setCommitStatus,
 } from "./github.js";
 
 /**
@@ -38,6 +39,16 @@ export async function runPRReview({
   const commit_id = pr.head.sha;
 
   console.log(`📂 Files changed: ${files.length}`);
+
+  // 🔄 Set status to PENDING at the start
+  await setCommitStatus({
+    octokit,
+    owner,
+    repo,
+    sha: commit_id,
+    state: "pending",
+    description: `Reviewing ${files.length} file(s)...`,
+  });
 
   // 2️⃣ Review files individually
   const summaryIssues = [];
@@ -172,7 +183,32 @@ ${issue.suggestion}`,
     throw err;
   }
 
-  // 5️⃣ Return review results for database storage
+  // 5️⃣ Set final commit status based on results
+  const hasIssues = summaryIssues.length > 0;
+  let statusState;
+  let statusDescription;
+
+  if (!hasIssues) {
+    statusState = "success";
+    statusDescription = "✅ All clear! No issues found.";
+  } else if (hasHighSeverity) {
+    statusState = "failure";
+    statusDescription = `❌ Found ${summaryIssues.length} issue(s) including critical ones`;
+  } else {
+    statusState = "success";
+    statusDescription = `⚠️ Found ${summaryIssues.length} minor issue(s)`;
+  }
+
+  await setCommitStatus({
+    octokit,
+    owner,
+    repo,
+    sha: commit_id,
+    state: statusState,
+    description: statusDescription,
+  });
+
+  // 6️⃣ Return review results for database storage
   return {
     issuesFound: summaryIssues.length,
     hasHighSeverity,

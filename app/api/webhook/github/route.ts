@@ -196,44 +196,92 @@ export async function POST(req: Request) {
       );
       console.log("✅ GitHub client created");
 
-      // 🤖 Run PR Review using our reviewer system
-      console.log("🤖 Importing reviewer module...");
-      const { runPRReview } = await import("@/reviewer/index.js");
-      console.log("✅ Reviewer module loaded");
-
-      console.log("🔄 Running PR review...");
-      const reviewResult = await runPRReview({
-        octokit,
+      // Get PR details for commit SHA
+      const pr = await octokit.rest.pulls.get({
         owner,
         repo,
         pull_number,
-        openaiApiKey: installation.openaiKey,
       });
+      const commit_sha = pr.data.head.sha;
 
-      // 📊 Save review to database (Redis for persistence)
-      if (reviewResult) {
+      try {
+        // 🤖 Run PR Review using our reviewer system
+        console.log("🤖 Importing reviewer module...");
+        const { runPRReview } = await import("@/reviewer/index.js");
+        console.log("✅ Reviewer module loaded");
+
+        console.log("🔄 Running PR review...");
+        const reviewResult = await runPRReview({
+          octokit,
+          owner,
+          repo,
+          pull_number,
+          openaiApiKey: installation.openaiKey,
+        });
+
+        // 📊 Save review to database (Redis for persistence)
+        if (reviewResult) {
+          try {
+            await kvdb.prReview.create({
+              owner,
+              repo,
+              prNumber: pull_number,
+              prTitle: reviewResult.prTitle,
+              reviewedBy: installation.accountLogin,
+              issuesFound: reviewResult.issuesFound,
+              hasHighSeverity: reviewResult.hasHighSeverity,
+            });
+            console.log("💾 Review saved to Redis (persistent storage)");
+          } catch (err: any) {
+            console.error("⚠️ Failed to save review to Redis:", err.message);
+            // Don't fail the whole process if DB save fails
+          }
+        }
+
+        console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        console.log("✅ PR REVIEW COMPLETED SUCCESSFULLY");
+        console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+        return NextResponse.json({ ok: true });
+        
+      } catch (reviewError: any) {
+        console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        console.error("❌ PR REVIEW FAILED");
+        console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        console.error(reviewError);
+
+        // Set commit status to error
         try {
-          await kvdb.prReview.create({
+          const { setCommitStatus } = await import("@/reviewer/github.js");
+          await setCommitStatus({
+            octokit,
             owner,
             repo,
-            prNumber: pull_number,
-            prTitle: reviewResult.prTitle,
-            reviewedBy: installation.accountLogin,
-            issuesFound: reviewResult.issuesFound,
-            hasHighSeverity: reviewResult.hasHighSeverity,
+            sha: commit_sha,
+            state: "error",
+            description: "❌ Review failed - check logs",
           });
-          console.log("💾 Review saved to Redis (persistent storage)");
-        } catch (err: any) {
-          console.error("⚠️ Failed to save review to Redis:", err.message);
-          // Don't fail the whole process if DB save fails
+        } catch (statusErr: any) {
+          console.error("⚠️ Failed to set error status:", statusErr.message);
         }
+
+        // Post error comment on PR
+        try {
+          await octokit.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: pull_number,
+            body:
+              "❌ **AI Review Failed**\n\n" +
+              "An error occurred while reviewing this PR. Please check the logs or contact support.\n\n" +
+              `Error: ${reviewError.message}`,
+          });
+        } catch (commentErr: any) {
+          console.error("⚠️ Failed to post error comment:", commentErr.message);
+        }
+
+        return NextResponse.json({ ok: true });
       }
-
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("✅ PR REVIEW COMPLETED SUCCESSFULLY");
-      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-      return NextResponse.json({ ok: true });
     }
 
     /**

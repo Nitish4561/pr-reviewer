@@ -165,3 +165,41 @@ export async function applyLabels({
   });
   console.log(`   ✅ Labels applied: ${labels.join(', ')}`);
 }
+
+/* ----------------------------------------
+   Commit Status (GitHub Checks)
+----------------------------------------- */
+
+/**
+ * Set commit status - this shows up in GitHub PR checks/actions tab
+ */
+export async function setCommitStatus({
+  octokit,
+  owner,
+  repo,
+  sha,
+  state, // 'pending', 'success', 'failure', 'error'
+  description,
+  context = "NirikshanAI Review",
+  target_url = null,
+}) {
+  console.log(`📊 Setting commit status: ${state} for ${sha.substring(0, 7)}`);
+  console.log(`   Context: ${context}`);
+  console.log(`   Description: ${description}`);
+  
+  try {
+    await octokit.repos.createCommitStatus({
+      owner,
+      repo,
+      sha,
+      state,
+      description,
+      context,
+      ...(target_url && { target_url }),
+    });
+    console.log(`   ✅ Status set to: ${state}`);
+  } catch (err) {
+    console.error(`   ❌ Failed to set commit status:`, err.message);
+    // Don't throw - status is nice to have but shouldn't break review
+  }
+}
