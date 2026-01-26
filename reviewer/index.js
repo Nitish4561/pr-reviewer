@@ -1,11 +1,11 @@
 /**
  * reviewer/index.js
  *
- * Pure callable service for PR review.
+ * Multi-Agent PR Review System
  * Called from webhook after PR event.
  */
 
-import { runReview } from "./llm.js";
+import { AgentOrchestrator } from "./agents/index.js";
 import {
   getPullRequest,
   getPullRequestFiles,
@@ -16,14 +16,14 @@ import {
 } from "./github.js";
 
 /**
- * Run AI PR Review
+ * Run Multi-Agent AI PR Review
  */
 export async function runPRReview({
   octokit,
   owner,
   repo,
   pull_number,
-  openaiApiKey, // pass OpenAI key here
+  openaiApiKey,
 }) {
   if (!octokit || !owner || !repo || !pull_number) {
     throw new Error("Missing required PR review parameters");
@@ -33,12 +33,20 @@ export async function runPRReview({
   if (!key) throw new Error("Missing OpenAI API key");
 
   // 1️⃣ Fetch PR + files
-  console.log(`🔍 Fetching PR #${pull_number} details...`);
+  console.log(`\n${"=".repeat(70)}`);
+  console.log(`🚀 MULTI-AGENT PR REVIEW SYSTEM`);
+  console.log(`${"=".repeat(70)}`);
+  console.log(`📍 Repository: ${owner}/${repo}`);
+  console.log(`🔢 PR Number: #${pull_number}`);
+  
   const pr = await getPullRequest({ octokit, owner, repo, pull_number });
   const files = await getPullRequestFiles({ octokit, owner, repo, pull_number });
   const commit_id = pr.head.sha;
 
-  console.log(`📂 Files changed: ${files.length}`);
+  console.log(`📝 PR Title: ${pr.title}`);
+  console.log(`📂 Files Changed: ${files.length}`);
+  console.log(`👤 Author: ${pr.user?.login || 'unknown'}`);
+  console.log(`${"=".repeat(70)}\n`);
 
   // 🔄 Set status to PENDING at the start
   await setCommitStatus({
@@ -47,156 +55,105 @@ export async function runPRReview({
     repo,
     sha: commit_id,
     state: "pending",
-    description: `Reviewing ${files.length} file(s)...`,
+    description: `🤖 Multi-Agent Review: Analyzing ${files.length} file(s)...`,
   });
 
-  // 2️⃣ Review files individually
-  const summaryIssues = [];
-  let hasHighSeverity = false;
-  let sequenceDiagram = null;
+  // 2️⃣ Run Multi-Agent Review
+  const orchestrator = new AgentOrchestrator();
+  
+  const reviewResults = await orchestrator.runAllAgents(
+    {
+      pr,
+      files,
+      octokit,
+      owner,
+      repo,
+      pull_number,
+    },
+    key
+  );
 
-  if (files.length > 0) {
-    console.log(`🤖 Starting AI review of ${files.length} files...`);
-
-  for (const file of files) {
-      if (!file.patch) {
-        console.log(`   ⏭️  Skipping ${file.filename} (no patch - binary/deleted)`);
-        continue; // binary / deleted
-      }
-
-      console.log(`   🔎 Reviewing: ${file.filename}`);
-    const review = await runReview(file.patch, key); // pass OpenAI key
-
-    // Capture sequence diagram from first file that provides one
-    if (review?.sequenceDiagram && !sequenceDiagram) {
-      sequenceDiagram = review.sequenceDiagram;
-      console.log(`   📊 Sequence diagram generated`);
-    }
-
-    if (!review?.issues?.length) {
-        console.log(`   ✅ No issues found in ${file.filename}`);
-      continue;
-    }
-      
-      console.log(`   ⚠️  Found ${review.issues.length} issues in ${file.filename}`);
-
-    for (const issue of review.issues) {
-      if (!issue.line) {
-        console.warn(`   ⚠️ Skipping issue without line number`);
-        continue;
-      }
-
-      if (issue.severity === "high") hasHighSeverity = true;
-
-      // Post inline comment
+  // 3️⃣ Post inline comments from agents
+  console.log(`\n📝 Posting inline comments...`);
+  const inlineComments = orchestrator.buildInlineComments(reviewResults.agentResults);
+  
+  for (const comment of inlineComments) {
+    try {
       await createReviewComment({
         octokit,
         owner,
         repo,
         pull_number,
         commit_id,
-        path: file.filename,
-        line: issue.line,
-        body: `**🔴 ${issue.severity.toUpperCase()}**
-
-${issue.description}
-
-**💡 Suggestion:**
-${issue.suggestion}`,
+        path: comment.path,
+        line: comment.line,
+        body: comment.body,
       });
-
-      summaryIssues.push({
-        file: file.filename,
-        line: issue.line,
-        title: issue.description,
-        severity: issue.severity || "medium",
-      });
+      console.log(`   ✅ Comment posted: ${comment.path}:${comment.line}`);
+    } catch (error) {
+      console.error(`   ❌ Failed to post comment on ${comment.path}:${comment.line}:`, error.message);
     }
-    }
-  } else {
-    console.log(`⚠️ No files changed in this PR update - will post clean review summary`);
   }
 
-  // 3️⃣ Final PR summary
-  console.log(`📊 Creating review summary...`);
-  console.log(`   Total issues found: ${summaryIssues.length}`);
-  console.log(`   Has high severity: ${hasHighSeverity}`);
+  console.log(`   Total inline comments posted: ${inlineComments.length}`);
+
+  // 4️⃣ Post comprehensive PR summary
+  console.log(`\n📊 Creating multi-agent review summary...`);
   
-  let summaryBody;
-  if (summaryIssues.length === 0) {
-    console.log(`   ✅ No issues found - posting positive summary`);
-    summaryBody = `## 🤖 NirikshanAI PR Review Summary
-
-✅ **All Clear!** No issues found across changed files.`;
-    
-    // Add sequence diagram if available
-    if (sequenceDiagram) {
-      summaryBody += `\n\n## 🔄 System Flow\n\n\`\`\`mermaid\n${sequenceDiagram}\n\`\`\``;
-    }
-    
-    summaryBody += `\n\n---\n⚙️ Reviewed automatically by **NirikshanAI**`;
-  } else {
-    console.log(`   ⚠️ Issues found - posting detailed summary`);
-    summaryBody = `## 🤖 NirikshanAI PR Review Summary\n\n`;
-    const grouped = {};
-    for (const issue of summaryIssues) {
-      grouped[issue.file] = grouped[issue.file] || [];
-      grouped[issue.file].push(issue);
-    }
-
-    for (const file in grouped) {
-      summaryBody += `### 📄 ${file}\n`;
-      grouped[file].forEach((i) => {
-        summaryBody += `- **${i.severity.toUpperCase()}** (Line ${i.line}) — ${i.title}\n`;
-      });
-      summaryBody += "\n";
-    }
-
-    // Add sequence diagram if available
-    if (sequenceDiagram) {
-      summaryBody += `## 🔄 System Flow\n\n\`\`\`mermaid\n${sequenceDiagram}\n\`\`\`\n\n`;
-    }
-
-    summaryBody += `---\n`;
-    summaryBody += `⚙️ Reviewed automatically by **NirikshanAI**`;
-  }
-
   try {
-  await createReviewSummary({
-    octokit,
-    owner,
-    repo,
-    pull_number,
-    body: summaryBody,
-  });
+    await createReviewSummary({
+      octokit,
+      owner,
+      repo,
+      pull_number,
+      body: reviewResults.combinedMarkdown,
+    });
+    console.log(`   ✅ Review summary posted`);
   } catch (err) {
-    console.error("❌ Failed to post review summary:", err.message);
+    console.error("   ❌ Failed to post review summary:", err.message);
     throw err;
   }
 
-  // 4️⃣ Apply labels
+  // 5️⃣ Apply intelligent labels based on multi-agent analysis
+  console.log(`\n🏷️  Applying labels...`);
+  
   try {
-    const hasIssues = summaryIssues.length > 0;
-    await applyLabels({ octokit, owner, repo, pull_number, hasHighSeverity, hasIssues });
+    const { issuesFound, hasHighSeverity, riskLevel, changeType } = reviewResults.summary;
+    
+    await applyLabels({
+      octokit,
+      owner,
+      repo,
+      pull_number,
+      hasHighSeverity,
+      hasIssues: issuesFound > 0,
+      // Pass additional context for smart labeling
+      riskLevel,
+      changeType,
+    });
+    
+    console.log(`   ✅ Labels applied`);
   } catch (err) {
-    console.error("❌ Failed to apply labels:", err.message);
-    throw err;
+    console.error("   ❌ Failed to apply labels:", err.message);
   }
 
-  // 5️⃣ Set final commit status based on results
-  const hasIssues = summaryIssues.length > 0;
+  // 6️⃣ Set final commit status based on multi-agent results
+  console.log(`\n✓ Setting final commit status...`);
+  
+  const { issuesFound, hasHighSeverity, riskLevel } = reviewResults.summary;
+  
   let statusState;
   let statusDescription;
 
-  if (!hasIssues) {
+  if (issuesFound === 0) {
     statusState = "success";
-    statusDescription = "✅ All clear! No issues found.";
+    statusDescription = `✅ All clear! (Risk: ${riskLevel})`;
   } else if (hasHighSeverity) {
     statusState = "failure";
-    statusDescription = `❌ Found ${summaryIssues.length} issue(s) including critical ones`;
+    statusDescription = `❌ Found ${issuesFound} issue(s) including critical ones`;
   } else {
     statusState = "success";
-    statusDescription = `⚠️ Found ${summaryIssues.length} minor issue(s)`;
+    statusDescription = `⚠️ Found ${issuesFound} minor issue(s) (Risk: ${riskLevel})`;
   }
 
   await setCommitStatus({
@@ -208,10 +165,28 @@ ${issue.suggestion}`,
     description: statusDescription,
   });
 
-  // 6️⃣ Return review results for database storage
+  console.log(`   Status: ${statusState.toUpperCase()}`);
+  console.log(`   Description: ${statusDescription}`);
+
+  // 7️⃣ Final summary
+  console.log(`\n${"=".repeat(70)}`);
+  console.log(`✅ MULTI-AGENT REVIEW COMPLETE`);
+  console.log(`${"=".repeat(70)}`);
+  console.log(`📊 Results Summary:`);
+  console.log(`   - Issues Found: ${issuesFound}`);
+  console.log(`   - High Severity: ${hasHighSeverity ? 'YES' : 'NO'}`);
+  console.log(`   - Risk Level: ${riskLevel.toUpperCase()}`);
+  console.log(`   - Change Type: ${reviewResults.summary.changeType}`);
+  console.log(`   - Inline Comments: ${inlineComments.length}`);
+  console.log(`${"=".repeat(70)}\n`);
+
+  // 8️⃣ Return review results for database storage
   return {
-    issuesFound: summaryIssues.length,
+    issuesFound,
     hasHighSeverity,
     prTitle: pr.title || "Untitled PR",
+    riskLevel,
+    changeType: reviewResults.summary.changeType,
+    agentResults: reviewResults.agentResults,
   };
 }
