@@ -1,7 +1,15 @@
 import { Resend } from 'resend';
 
-// Initialize Resend client
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy-init: instantiating at module load crashes any route that imports this
+// file when RESEND_API_KEY is missing (e.g. during Next.js build or local dev).
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (_resend) return _resend;
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error('RESEND_API_KEY is not set');
+  _resend = new Resend(key);
+  return _resend;
+}
 
 // Email configuration
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
@@ -47,7 +55,7 @@ export async function sendAdminAccessRequestNotification(request: {
     console.log(`   From: ${FROM_EMAIL}`);
 
     const emailPromises = ADMIN_EMAILS.map(adminEmail =>
-      resend.emails.send({
+      getResend().emails.send({
         from: FROM_EMAIL,
         to: adminEmail,
         subject: `🔔 New Access Request - ${APP_NAME}`,
@@ -165,7 +173,7 @@ export async function sendAccessApprovedEmail(user: {
   try {
     console.log(`📧 Sending approval notification to: ${user.email}`);
 
-    const result = await resend.emails.send({
+    const result = await getResend().emails.send({
       from: FROM_EMAIL,
       to: user.email,
       subject: `✅ Access Approved - Welcome to ${APP_NAME}!`,
@@ -284,7 +292,7 @@ export async function sendAccessRejectedEmail(user: {
   try {
     console.log(`📧 Sending rejection notification to: ${user.email}`);
 
-    const result = await resend.emails.send({
+    const result = await getResend().emails.send({
       from: FROM_EMAIL,
       to: user.email,
       subject: `Access Request Update - ${APP_NAME}`,
