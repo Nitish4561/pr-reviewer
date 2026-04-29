@@ -1,14 +1,20 @@
 import jwt from "jsonwebtoken";
 import { Octokit } from "@octokit/rest";
-const APP_ID = process.env.GITHUB_APP_ID!;
-const PRIVATE_KEY = process.env.GITHUB_PRIVATE_KEY!.replace(/\\n/g, "\n");
 
-if (!APP_ID || !PRIVATE_KEY) {
-  throw new Error("Missing GITHUB_APP_ID or GITHUB_PRIVATE_KEY");
+// Lazy-loaded so Next.js build doesn't crash when env vars are absent at
+// static-analysis time. Values are resolved on the first actual request.
+function getAppCredentials() {
+  const appId = process.env.GITHUB_APP_ID;
+  const rawKey = process.env.GITHUB_PRIVATE_KEY;
+  if (!appId || !rawKey) {
+    throw new Error("Missing GITHUB_APP_ID or GITHUB_PRIVATE_KEY");
+  }
+  return { appId, privateKey: rawKey.replace(/\\n/g, "\n") };
 }
 export async function getInstallationOctokit(
   installationId: number
 ): Promise<Octokit> {
+  const { appId, privateKey } = getAppCredentials();
   const now = Math.floor(Date.now() / 1000);
 
   // 1️⃣ Create JWT for GitHub App
@@ -16,9 +22,9 @@ export async function getInstallationOctokit(
     {
       iat: now - 60,
       exp: now + 600,
-      iss: APP_ID,
+      iss: appId,
     },
-    PRIVATE_KEY,
+    privateKey,
     { algorithm: "RS256" }
   );
 
