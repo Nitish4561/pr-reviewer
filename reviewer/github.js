@@ -71,6 +71,42 @@ export async function createReviewComment({
 }
 
 /* ----------------------------------------
+   PR-level comment (review started notice)
+----------------------------------------- */
+
+/**
+ * Posts a comment letting users know NirikshanAI has started reviewing.
+ * Non-blocking — failures are logged but never abort the review.
+ */
+export async function createReviewStartedComment({
+  octokit,
+  owner,
+  repo,
+  pull_number,
+}) {
+  console.log(`💬 Posting "review started" notice to PR #${pull_number}`);
+
+  try {
+    const { data } = await octokit.issues.createComment({
+      owner,
+      repo,
+      issue_number: pull_number,
+      body:
+        `## 👀 NirikshanAI is reviewing this PR...\n\n` +
+        `Hold tight — I'm analyzing the changed files and will post inline comments ` +
+        `along with a summary shortly.\n\n` +
+        `---\n` +
+        `⚙️ Powered by **NirikshanAI**`,
+    });
+    console.log(`   ✅ "Review started" notice posted (comment id: ${data.id})`);
+    return data.id;
+  } catch (err) {
+    console.error(`   ❌ Failed to post "review started" notice:`, err.message);
+    return null;
+  }
+}
+
+/* ----------------------------------------
    PR-level comment (summary)
 ----------------------------------------- */
 
@@ -80,17 +116,36 @@ export async function createReviewSummary({
   repo,
   pull_number,
   body,
+  comment_id, // optional: if provided, edit this comment in-place instead of creating a new one
 }) {
   console.log(`💬 Posting review summary to PR #${pull_number}`);
   console.log(`   Summary length: ${body.length} characters`);
-  
+  console.log(`   Mode: ${comment_id ? `update existing comment #${comment_id}` : "create new comment"}`);
+
+  if (comment_id) {
+    try {
+      await octokit.issues.updateComment({
+        owner,
+        repo,
+        comment_id,
+        body,
+      });
+      console.log(`   ✅ Summary updated in place on comment #${comment_id}`);
+      return;
+    } catch (err) {
+      console.warn(
+        `   ⚠️ Failed to update comment #${comment_id} (${err.message}). Falling back to a new comment.`
+      );
+    }
+  }
+
   await octokit.issues.createComment({
     owner,
     repo,
     issue_number: pull_number,
     body,
   });
-  
+
   console.log(`   ✅ Summary posted successfully`);
 }
 
