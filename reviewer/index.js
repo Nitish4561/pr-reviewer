@@ -11,6 +11,7 @@ import {
   getPullRequestFiles,
   createReviewComment,
   createReviewSummary,
+  createReviewStartedComment,
   applyLabels,
   setCommitStatus,
 } from "./github.js";
@@ -31,6 +32,16 @@ export async function runPRReview({
 
   const key = openaiApiKey || process.env.OPENAI_API_KEY;
   if (!key) throw new Error("Missing OpenAI API key");
+
+  // 📣 Let watchers know the review has started.
+  // We capture the comment id so we can UPDATE this same comment with the
+  // final summary — one comment per run that morphs from "reviewing..." → summary.
+  const startedCommentId = await createReviewStartedComment({
+    octokit,
+    owner,
+    repo,
+    pull_number,
+  });
 
   // 1️⃣ Fetch PR + files
   console.log(`\n${"=".repeat(70)}`);
@@ -107,6 +118,7 @@ export async function runPRReview({
       repo,
       pull_number,
       body: reviewResults.combinedMarkdown,
+      comment_id: startedCommentId, // update the "reviewing..." comment in place when available
     });
     console.log(`   ✅ Review summary posted`);
   } catch (err) {
