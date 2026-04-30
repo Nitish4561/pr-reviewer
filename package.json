@@ -12,7 +12,7 @@
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
-      "eslint --max-warnings 0"
+      "eslint --config eslint.no-console.config.js --max-warnings 0"
     ]
   },
   "dependencies": {
@@ -28,6 +28,7 @@
     "resend": "^6.6.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.0.3",
     "@types/react": "^19.2.7",
@@ -36,6 +37,7 @@
     "@typescript-eslint/parser": "^8.59.1",
     "autoprefixer": "^10.4.16",
     "eslint": "^10.2.1",
+    "globals": "^17.5.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "postcss": "^8.4.32",
