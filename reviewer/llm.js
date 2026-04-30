@@ -17,6 +17,7 @@ export async function runReview(diff, openaiApiKey) {
   if (!key) throw new Error("OpenAI API key not provided to runReview");
 
   if (!diff || diff.length < 20) {
+    console.log("No diff provided to runReview", diff);
     return { issues: [], sequenceDiagram: null };
   }
 

@@ -6,13 +6,12 @@ const tsparser = require("@typescript-eslint/parser");
 const globals = require("globals");
 
 const sharedConfig = {
-  ignores: [
-    "reviewer/**",
-    "node_modules/**",
-    ".next/**",
-    "*.config.js",
-    "*.config.ts",
-  ],
+    ignores: [
+      "node_modules/**",
+      ".next/**",
+      "*.config.js",
+      "*.config.ts",
+    ],
   languageOptions: {
     globals: {
       ...globals.browser,
