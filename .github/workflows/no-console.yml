@@ -23,7 +23,6 @@ jobs:
 
           CONSOLE_LINES=$(git diff origin/${{ github.base_ref }}...HEAD \
             -- '*.js' '*.ts' '*.jsx' '*.tsx' \
-            ':(exclude)reviewer/**' \
             ':(exclude)*.config.js' \
             ':(exclude)*.config.ts' \
             | grep '^+' | grep -v '^+++' \

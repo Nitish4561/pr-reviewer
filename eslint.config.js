@@ -41,14 +41,6 @@ module.exports = [
     },
   },
 
-  // reviewer/ is intentional server-side logging — allow console here
-  {
-    files: ["reviewer/**/*.js"],
-    rules: {
-      "no-console": "off",
-    },
-  },
-
   // Ignore build artifacts and config files
   {
     ignores: [
