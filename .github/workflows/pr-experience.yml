@@ -1,0 +1,108 @@
+name: NirikshanAI PR Experience
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  post-waiting-content:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Post fun content while review runs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const funFacts = [
+              "The first computer bug was a real moth — found trapped in a relay of the Harvard Mark II in 1947. Grace Hopper's team taped it into the logbook with the note: *\"First actual case of bug being found.\"*",
+              "The QWERTY keyboard layout was designed in 1873 to **slow typists down** — fast typing jammed the mechanical keys of early typewriters.",
+              "Ada Lovelace wrote the world's first algorithm in 1843 — for a machine (Babbage's Analytical Engine) that was never actually built.",
+              "NASA's Apollo 11 guidance computer had just **4 KB of RAM** and 72 KB of storage. Your browser tab uses more memory just to render a favicon.",
+              "The @ symbol was chosen for email addresses in 1971 because it was the only preposition on the keyboard not already used in code.",
+              "Linux now runs ~96% of the world's top one million servers. It started in 1991 as a **hobby project** by a 21-year-old Finnish student.",
+              "The first website ever published is still live at **info.cern.ch** — it went online on August 6, 1991.",
+              "JavaScript was written in **10 days** in May 1995. It was originally called Mocha, then LiveScript, before being renamed as a marketing ploy to ride Java's hype.",
+              "Python is named after **Monty Python's Flying Circus**, not the snake. Guido van Rossum was reading the show's scripts while designing the language.",
+              "Git was created by Linus Torvalds in just **10 days** in April 2005 after a falling-out over BitKeeper licensing fees.",
+              "An estimated **70% of all code ever written** is now inaccessible — lost to dead startups, deleted hard drives, and bit rot.",
+              "The term *debugging* predates computers — engineers in the 1800s used it to describe removing actual insects from telegraph relays.",
+              "Stack Overflow launched in 2008 and hit **1 million page views in its first month**. Developers were that desperate for a better answer site.",
+              "The first emoji set was created in **1999** by Shigetaka Kurita for a Japanese mobile internet platform. The original 176 icons were 12×12 pixels.",
+            ];
+
+            const motivations = [
+              "**\"The best way to predict the future is to invent it.\"** — Alan Kay",
+              "**\"First, solve the problem. Then, write the code.\"** — John Johnson",
+              "**\"Code is like humor. When you have to explain it, it's bad.\"** — Cory House",
+              "**\"The most dangerous phrase in the language is: 'We've always done it this way.'\"** — Grace Hopper",
+              "**\"Make it work, make it right, make it fast.\"** — Kent Beck",
+              "**\"Simplicity is the soul of efficiency.\"** — Austin Freeman",
+              "**\"Every great developer you know got there by solving problems they were unqualified to solve until they did it.\"** — Patrick McKenzie",
+              "**\"One of my most productive days was throwing away 1,000 lines of code.\"** — Ken Thompson",
+              "**\"Measuring programming progress by lines of code is like measuring aircraft building progress by weight.\"** — Bill Gates",
+              "**\"If debugging is the process of removing bugs, then programming must be the process of putting them in.\"** — Edsger W. Dijkstra",
+              "**\"Any sufficiently advanced technology is indistinguishable from magic.\"** — Arthur C. Clarke",
+              "**\"The function of good software is to make the complex appear simple.\"** — Grady Booch",
+              "**\"Walking on water and developing software from a spec are easy if both are frozen.\"** — Edward V. Berard",
+              "**\"In theory, there is no difference between theory and practice. In practice, there is.\"** — Yogi Berra",
+            ];
+
+            const stories = [
+              "**The $440M Typo (2012)** — Knight Capital Group lost $440 million in 45 minutes because an engineer forgot to deploy new code to one of eight servers. The old, faulty trading algorithm ran on that server and bought high / sold low 8 million times before anyone noticed.",
+              "**The Y2K Bug** — In the 1960s–70s, storage was so expensive that programmers stored years as two digits. The world spent an estimated **$300–600 billion** fixing this before 2000. Planes didn't fall. The real story: the fix worked.",
+              "**The Ariane 5 Explosion (1996)** — A €370M rocket self-destructed 37 seconds after launch because a 64-bit float was converted to a 16-bit integer, causing an overflow. The bug was in reused code from Ariane 4 that no one had re-validated for the new rocket.",
+              "**The Birth of Open Source (1983)** — Richard Stallman was so frustrated he couldn't fix a bug in his lab's printer (Xerox refused to share the source code) that he launched the GNU Project, accidentally sparking the entire open-source movement.",
+              "**The Mars Climate Orbiter (1999)** — A $327M NASA spacecraft burned up in Mars's atmosphere because one team used metric units and another used imperial in the navigation software. Nobody checked.",
+              "**The 500-Mile Email (2002)** — A sysadmin reported that email only worked within 500 miles. A misconfigured 3ms timeout was just enough time for light to travel ~500 miles through fiber — but not enough for a full TCP handshake to complete with farther servers.",
+              "**Amazon S3 Outage (2017)** — An engineer ran a command to remove a *small* number of billing servers. A typo removed a much larger set, taking down S3 — and huge chunks of the internet including Slack and Quora — for four hours.",
+              "**The Therac-25 (1985–87)** — A radiation therapy machine killed at least three patients due to a race condition. When operators typed fast enough, it delivered radiation doses **100× the intended amount**. One of the most cited examples of why software safety matters.",
+              "**How the Internet Survived a Mistake (2010)** — China Telecom accidentally rerouted **15% of the world's internet traffic** through China for 18 minutes, including US military traffic. BGP, the protocol that routes internet traffic, still has no built-in verification.",
+            ];
+
+            const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+            const fact       = pick(funFacts);
+            const motivation = pick(motivations);
+            const story      = pick(stories);
+
+            const body = `## 👀 NirikshanAI is reviewing this PR...
+
+Hold tight — the AI is analyzing your changes and will post inline comments along with a full summary shortly.
+
+---
+
+### Something to read while you wait
+
+<details>
+<summary>💡 <strong>Fun Fact</strong> — click to read</summary>
+
+> ${fact}
+
+</details>
+
+<details>
+<summary>✨ <strong>Motivation</strong> — click for a boost</summary>
+
+> ${motivation}
+
+</details>
+
+<details>
+<summary>📖 <strong>IT History Story</strong> — click for a tale from the trenches</summary>
+
+> ${story}
+
+</details>
+
+---
+⚙️ Powered by **NirikshanAI**`;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });

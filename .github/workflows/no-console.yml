@@ -1,0 +1,40 @@
+name: No Console Statements
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  no-console:
+    name: Check for console statements
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for new console statements in PR diff
+        run: |
+          git fetch origin ${{ github.base_ref }}
+
+          CONSOLE_LINES=$(git diff origin/${{ github.base_ref }}...HEAD \
+            -- '*.js' '*.ts' '*.jsx' '*.tsx' \
+            ':(exclude)reviewer/**' \
+            ':(exclude)*.config.js' \
+            ':(exclude)*.config.ts' \
+            | grep '^+' | grep -v '^+++' \
+            | grep -E 'console\.(log|warn|error|debug|info|table|trace|dir)' || true)
+
+          if [ -n "$CONSOLE_LINES" ]; then
+            echo ""
+            echo "❌ Console statements found in this PR — please remove them before merging:"
+            echo ""
+            echo "$CONSOLE_LINES"
+            exit 1
+          fi
+
+          echo "✅ No console statements found in PR changes"

@@ -6,7 +6,14 @@
   "scripts": {
     "dev": "next dev -p 4002",
     "build": "next build",
-    "start": "next start -p 4002"
+    "start": "next start -p 4002",
+    "lint": "eslint . --ext .js,.ts,.jsx,.tsx",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --config eslint.no-console.config.js --max-warnings 0"
+    ]
   },
   "dependencies": {
     "@octokit/rest": "^22.0.1",
@@ -21,11 +28,18 @@
     "resend": "^6.6.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.0.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.59.1",
+    "@typescript-eslint/parser": "^8.59.1",
     "autoprefixer": "^10.4.16",
+    "eslint": "^10.2.1",
+    "globals": "^17.5.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.9.3"
